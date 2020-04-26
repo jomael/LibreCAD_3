@@ -8,12 +8,18 @@
 #include "cad/vo/entitycoordinate.h"
 #include "cad/math/lcmath.h"
 #include <cad/primitive/point.h>
+#include <cad/builders/dimaligned.h>
 #include "cad/interface/draggable.h"
 
 namespace lc {
     namespace entity {
 
-        class DimAligned : public std::enable_shared_from_this<DimAligned>, public CADEntity, public Dimension, virtual public Visitable, public Draggable {
+        class DimAligned : public std::enable_shared_from_this<DimAligned>,
+                           public CADEntity,
+                           public Dimension,
+                           virtual public Visitable,
+                           public Draggable {
+        friend class lc::builder::DimAlignedBuilder;
         public:
 
 
@@ -25,20 +31,24 @@ namespace lc {
             * @param double oblique
             * @param Layer_CSPtr layer
             */
-            DimAligned(geo::Coordinate const &definitionPoint, geo::Coordinate const &middleOfText,
-                       TextConst::AttachmentPoint const &attachmentPoint, double textAngle,
-                       double const lineSpacingFactor,
-                       TextConst::LineSpacingStyle const &lineSpacingStyle, std::string const &explicitValue,
-                       geo::Coordinate const &definitionPoint2, geo::Coordinate const &definitionPoint3,
-                       const Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo = nullptr, const Block_CSPtr block = nullptr);
+            DimAligned(geo::Coordinate definitionPoint,
+                       geo::Coordinate middleOfText,
+                       TextConst::AttachmentPoint attachmentPoint,
+                       double textAngle,
+                       double lineSpacingFactor,
+                       TextConst::LineSpacingStyle lineSpacingStyle,
+                       std::string explicitValue,
+                       geo::Coordinate definitionPoint2,
+                       geo::Coordinate definitionPoint3,
+                       meta::Layer_CSPtr layer,
+                       meta::MetaInfo_CSPtr metaInfo = nullptr,
+                       meta::Block_CSPtr block = nullptr);
 
 
-            DimAligned(const DimAligned_CSPtr other, bool sameID = false);
+            DimAligned(const DimAligned_CSPtr& other, bool sameID = false);
 
-            static DimAligned_SPtr dimAuto(geo::Coordinate const &p1, geo::Coordinate const &p2,
-                                           geo::Coordinate const &middleOfText, std::string const &explicitValue,
-                                           const Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo = nullptr,
-                                           const Block_CSPtr block = nullptr);
+        private:
+            DimAligned(const lc::builder::DimAlignedBuilder& builder);
 
         public:
             /**
@@ -61,7 +71,7 @@ namespace lc {
             * @param double rotation_angle
             * @return CADEntity_CSPtr rotated entity
             */
-            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
             * @brief scale, scales the entity
@@ -81,7 +91,7 @@ namespace lc {
             */
             virtual const geo::Area boundingBox() const override;
 
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
             // Where p2 specifies the first point of the dimension, p3 specifies that second point of the dimension
             // defPoint specifies where the dimension is specified and notates the horizontal/vertical 'line' between the two points

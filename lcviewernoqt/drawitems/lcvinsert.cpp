@@ -1,14 +1,14 @@
 #include "lcvinsert.h"
 
-using namespace LCViewer;
+using namespace lc::viewer;
 
-LCVInsert::LCVInsert(lc::entity::Insert_CSPtr insert) :
+LCVInsert::LCVInsert(lc::entity::Insert_CSPtr& insert) :
         LCVDrawItem(insert, true),
         _insert(insert) {
 
     _offset = _insert->position() - _insert->displayBlock()->base();
 
-    for(auto entity : _insert->document()->entitiesByBlock(_insert->displayBlock()).asVector()) {
+    for(const auto& entity : _insert->document()->entitiesByBlock(_insert->displayBlock()).asVector()) {
         append(entity);
     }
 
@@ -21,7 +21,7 @@ LCVInsert::~LCVInsert() {
     _insert->document()->removeEntityEvent().disconnect<LCVInsert, &LCVInsert::on_removeEntityEvent>(this);
 }
 
-void LCVInsert::append(lc::entity::CADEntity_CSPtr entity) {
+void LCVInsert::append(const lc::entity::CADEntity_CSPtr& entity) {
     auto drawable = DocumentCanvas::asDrawable(entity->move(_offset));
 
     if(drawable == nullptr) {
@@ -31,14 +31,14 @@ void LCVInsert::append(lc::entity::CADEntity_CSPtr entity) {
     _entities.insert(std::make_pair(entity->id(), drawable));
 }
 
-void LCVInsert::draw(LCViewer::LcPainter& _painter, const LCViewer::LcDrawOptions& options,
+void LCVInsert::draw(lc::viewer::LcPainter& _painter, const lc::viewer::LcDrawOptions& options,
                                const lc::geo::Area& updateRect) const {
     for(auto entity : _entities) {
         entity.second->draw(_painter, options, updateRect);
     }
 }
 
-void LCVInsert::draw(DocumentCanvas_SPtr docCanvas, LcPainter& painter) const {
+void LCVInsert::draw(const DocumentCanvas_SPtr& docCanvas, LcPainter& painter) const {
     auto shared = _insert->shared_from_this();
 
     for(auto entity : _entities) {
@@ -46,7 +46,7 @@ void LCVInsert::draw(DocumentCanvas_SPtr docCanvas, LcPainter& painter) const {
     }
 }
 
-void LCVInsert::on_addEntityEvent(const lc::AddEntityEvent& event) {
+void LCVInsert::on_addEntityEvent(const lc::event::AddEntityEvent& event) {
     auto entity = event.entity();
     _entities.erase(entity->id());
 
@@ -55,7 +55,7 @@ void LCVInsert::on_addEntityEvent(const lc::AddEntityEvent& event) {
     }
 }
 
-void LCVInsert::on_removeEntityEvent(const lc::RemoveEntityEvent& event) {
+void LCVInsert::on_removeEntityEvent(const lc::event::RemoveEntityEvent& event) {
     auto entity = event.entity();
 
     if(!entity->block() || entity->id() == _insert->id()) {

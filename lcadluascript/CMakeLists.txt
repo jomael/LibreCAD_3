@@ -1,7 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 PROJECT (LCLUASCRIPT)
-ADD_DEFINITIONS(-std=c++14)
-ADD_DEFINITIONS("-Wall")
 
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -9,12 +7,20 @@ message("***** LibreCAD lcadluascript *****")
 
 # SOURCE FILES
 set(lcluascript_srcs
-        lckernelbridge.cpp
         managers/pluginmanager.cpp
         lclua.cpp
         primitive/customentity.cpp
         builders/customentity.cpp
         managers/luacustomentitymanager.cpp
+        bridge/lc.cpp
+        bridge/lc_geo.cpp
+        bridge/lc_meta.cpp
+        bridge/lc_entity.cpp
+        bridge/lc_builder.cpp
+        bridge/lc_storage.cpp
+        bridge/lc_maths.cpp
+        bridge/lc_event.cpp
+        bridge/lc_operation.cpp
 )
 
 # HEADER FILES
@@ -26,6 +32,15 @@ set(lcluascript_hdrs
         primitive/customentity.h
         builders/customentity.h
         managers/luacustomentitymanager.h
+        bridge/lc.h
+        bridge/lc_geo.h
+        bridge/lc_meta.h
+        bridge/lc_entity.h
+        bridge/lc_builder.h
+        bridge/lc_storage.h
+        bridge/lc_maths.h
+        bridge/lc_event.h
+        bridge/lc_operation.h
 )
 
 
@@ -41,6 +56,12 @@ endif ()
 find_package(Lua 5.2 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
+# Logging
+find_package(Boost REQUIRED COMPONENTS log)
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+
+
 set(SEPARATE_BUILD OFF)
  
 if (SEPARATE_BUILD STREQUAL "ON")
@@ -48,16 +69,18 @@ if (SEPARATE_BUILD STREQUAL "ON")
     include_directories("${CMAKE_SOURCE_DIR}/../third_party")
     include_directories("${CMAKE_SOURCE_DIR}/../lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/../lcviewernoqt")
-else() 
+    include_directories("${CMAKE_SOURCE_DIR}/../third_party/kaguya/include")
+else()
     include_directories("${CMAKE_SOURCE_DIR}/lckernel")
     include_directories("${CMAKE_SOURCE_DIR}/third_party")
     include_directories("${CMAKE_SOURCE_DIR}/lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/lcviewernoqt")
+    include_directories("${CMAKE_SOURCE_DIR}/third_party/kaguya/include")
 endif()
 
 add_library(lcluascript SHARED ${lcluascript_srcs} ${lcluascript_hdrs})
 target_link_libraries(lcluascript ${LUA_LIBRARIES} lckernel)
 
 # INSTALLATION
-install(TARGETS lcluascript DESTINATION lib)
-install(FILES ${lcluascript_hdrs}  DESTINATION include)
+install(TARGETS lcluascript RUNTIME DESTINATION lib)
+install(TARGETS lcluascript RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

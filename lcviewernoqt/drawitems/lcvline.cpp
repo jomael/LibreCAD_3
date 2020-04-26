@@ -8,9 +8,9 @@
 #include "cad/geometry/geocircle.h"
 #include "cad/geometry/geobezierbase.h"
 
-using namespace LCViewer;
+using namespace lc::viewer;
 
-LCVLine::LCVLine(const lc::entity::Line_CSPtr line) :
+LCVLine::LCVLine(const lc::entity::Line_CSPtr& line) :
         LCVDrawItem(line, true),
         _line(line) {
 }

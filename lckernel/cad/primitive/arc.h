@@ -29,16 +29,16 @@ namespace lc {
              * @param Layer_CSPtr layer, layer of entity
              * @param MetaTypes metaTypes
              */
-            Arc(const geo::Coordinate &center, double radius, double startAngle, double endAngle,
-                bool CCW,
-                const Layer_CSPtr layer,
-                const MetaInfo_CSPtr metaInfo = nullptr,
-                const Block_CSPtr block = nullptr
+            Arc(const geo::Coordinate& center, double radius, double startAngle, double endAngle,
+                bool isCCW,
+                meta::Layer_CSPtr layer,
+                meta::MetaInfo_CSPtr metaInfo = nullptr,
+                meta::Block_CSPtr block = nullptr
             );
 
-            Arc(const geo::Arc &a, const Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, const Block_CSPtr block = nullptr);
+            Arc(const geo::Arc &a, meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block = nullptr);
 
-            Arc(const Arc_CSPtr other, bool sameID = false);
+            Arc(const Arc_CSPtr& other, bool sameID = false);
 
         public:
 
@@ -62,7 +62,7 @@ namespace lc {
          * @param double rotation_angle
          * @return CADEntity_CSPtr rotated entity
          */
-            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
          * @brief scale, scales the entity
@@ -82,7 +82,7 @@ namespace lc {
          */
             virtual const geo::Area boundingBox() const override;
 
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
         public:
             virtual std::vector<EntityCoordinate> snapPoints(const geo::Coordinate &coord, const SimpleSnapConstrain & constrain, double minDistanceToSnap,

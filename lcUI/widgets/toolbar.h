@@ -1,44 +1,53 @@
 #pragma once
 
 #include <QDockWidget>
+#include <QCloseEvent>
 #include "toolbartab.h"
 
 namespace Ui {
 	class Toolbar;
 }
 
-/**
- * \brief Toolbar widget, displays only ToolbarTabs
- */
-class Toolbar : public QDockWidget {
-	public:
-		/**
-		 * \brief Create widget
-		 * \param parent Pointer to parent widget
-		 */
-		Toolbar(QWidget *parent = 0);
-		~Toolbar();
+namespace lc {
+    namespace ui {
+        namespace widgets {
+            /**
+             * \brief Toolbar widget, displays only ToolbarTabs
+             */
+            class Toolbar : public QDockWidget {
+                public:
+                    /**
+                     * \brief Create widget
+                     * \param parent Pointer to parent widget
+                     */
+                    Toolbar(QWidget* parent = 0);
 
-		/**
-		 * \brief Add a new tab
-		 * \param name Tab name
-		 * \param page Pointer to ToolbarTab
-		 */
-		void addTab(const char* name, ToolbarTab* page);
+                    ~Toolbar();
 
-		/**
-		 * \brief Remove a tab
-		 * \param page Pointer to tab widget
-		 */
-		void removeTab(QWidget* page);
+                    /**
+                     * \brief Add a new tab
+                     * \param name Tab name
+                     * \param page Pointer to ToolbarTab
+                     */
+                    void addTab(const char* name, ToolbarTab* page);
 
-		/**
-		 * \brief Get existing tab
-		 * \param name Tab name
-		 * \return Pointer to ToolbarTab
-		 */
-		ToolbarTab* tabByName(const char* name);
+                    /**
+                     * \brief Remove a tab
+                     * \param page Pointer to tab widget
+                     */
+                    void removeTab(QWidget* page);
 
-	private:
-		Ui::Toolbar *ui;
-};
+                    /**
+                     * \brief Get existing tab
+                     * \param name Tab name
+                     * \return Pointer to ToolbarTab
+                     */
+                    ToolbarTab* tabByName(const char* name);
+					void closeEvent(QCloseEvent* event);
+
+                private:
+                    Ui::Toolbar* ui;
+            };
+        }
+    }
+}

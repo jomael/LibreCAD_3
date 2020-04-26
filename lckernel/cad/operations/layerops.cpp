@@ -1,5 +1,5 @@
 #include "layerops.h"
-#include "cad/document/document.h"
+#include "cad/storage/document.h"
 
 using namespace lc;
 using namespace operation;
@@ -7,9 +7,9 @@ using namespace operation;
 /********************************************************************************************************/
 /** AddLayer                                                                                          ***/
 /********************************************************************************************************/
-AddLayer::AddLayer(std::shared_ptr<Document> document, const Layer_CSPtr layer) :
-        DocumentOperation(document, "AddLayer"),
-        _layer(layer) {
+AddLayer::AddLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr layer) :
+        DocumentOperation(std::move(document), "AddLayer"),
+        _layer(std::move(layer)) {
 }
 
 void AddLayer::processInternal() {
@@ -27,21 +27,16 @@ void AddLayer::redo() const {
 /********************************************************************************************************/
 /** RemoveLayer                                                                                       ***/
 /********************************************************************************************************/
-RemoveLayer::RemoveLayer(std::shared_ptr<Document> document, const Layer_CSPtr layer) :
-        DocumentOperation(document, "RemoveLayer"),
-        _layer(layer) {
-
-    if(layer->name() == "0") {
-        throw "Layer 0 cannot be removed";
-    }
-
+RemoveLayer::RemoveLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr layer) :
+        DocumentOperation(std::move(document), "RemoveLayer"),
+        _layer(std::move(layer)) {
 }
 
 void RemoveLayer::processInternal() {
     auto le = document()->entityContainer().entitiesByLayer(_layer).asVector();
     _entities.insert(_entities.end(), le.begin(), le.end());
 
-    for (auto i : _entities) {
+    for (const auto& i : _entities) {
         document()->removeEntity(i);
     }
 
@@ -51,13 +46,13 @@ void RemoveLayer::processInternal() {
 void RemoveLayer::undo() const {
     document()->addDocumentMetaType(_layer);
 
-    for (auto i : _entities) {
+    for (const auto& i : _entities) {
         document()->insertEntity(i);
     }
 }
 
 void RemoveLayer::redo() const {
-    for (auto i : _entities) {
+    for (const auto& i : _entities) {
         document()->removeEntity(i);
     }
 
@@ -68,26 +63,36 @@ void RemoveLayer::redo() const {
 /********************************************************************************************************/
 /** ReplaceLayer                                                                                       ***/
 /********************************************************************************************************/
-ReplaceLayer::ReplaceLayer(std::shared_ptr<Document> document, const Layer_CSPtr oldLayer, const Layer_CSPtr newLayer) :
-        DocumentOperation(document, "ReplaceLayer"),
-        _oldLayer(oldLayer),
-        _newLayer(newLayer) {
+ReplaceLayer::ReplaceLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr oldLayer, meta::Layer_CSPtr newLayer) :
+        DocumentOperation(std::move(document), "ReplaceLayer"),
+        _oldLayer(std::move(oldLayer)),
+        _newLayer(std::move(newLayer)) {
 }
 
 void ReplaceLayer::processInternal() {
+    redo();
+}
+
+void ReplaceLayer::undo() const {
+    auto le = document()->entityContainer().entitiesByLayer(_newLayer).asVector();
+
+    for (const auto& i : le) {
+        document()->removeEntity(i);
+        document()->insertEntity(i->modify(_oldLayer, i->metaInfo(), i->block()));
+    }
+
+    document()->removeDocumentMetaType(_newLayer);
+    document()->addDocumentMetaType(_oldLayer);
+}
+
+void ReplaceLayer::redo() const {
     auto le = document()->entityContainer().entitiesByLayer(_oldLayer).asVector();
 
-    for (auto i : le) {
+    for (const auto& i : le) {
         document()->removeEntity(i);
         document()->insertEntity(i->modify(_newLayer, i->metaInfo(), i->block()));
     }
 
     document()->removeDocumentMetaType(_oldLayer);
     document()->addDocumentMetaType(_newLayer);
-}
-
-void ReplaceLayer::undo() const {
-}
-
-void ReplaceLayer::redo() const {
 }

@@ -1,17 +1,23 @@
 #include "clicommand.h"
 #include "ui_clicommand.h"
-#include <cad/settings.h>
 #include <memory>
 #include <iterator>
 #include <unordered_map>
+#include <QTextDocument>
+#include <QPainter>
+#include <QScrollBar>
+#include <QMessageBox>
+#include <QRegularExpression>
+
+using namespace lc::ui::widgets;
 
 CliCommand::CliCommand(QWidget* parent) :
     QDockWidget(parent),
     ui(new Ui::CliCommand),
     _returnText(false),
+    _commandActive(false),
     _historySize(10),
-    _historyIndex(-1)
-{
+    _historyIndex(-1) {
     ui->setupUi(this);
 
     connect(ui->command, SIGNAL(returnPressed()), this, SLOT(onReturnPressed()));
@@ -24,13 +30,18 @@ CliCommand::CliCommand(QWidget* parent) :
     _completer->setModel(_commands.get());
 
     ui->command->setCompleter(_completer.get());
+
+
+	WidgetTitleBar* titleBar = new WidgetTitleBar( "Cli Command", this,
+													WidgetTitleBar::TitleBarOptions::HorizontalOnHidden);
+	this->setTitleBarWidget(titleBar);
 }
 
 CliCommand::~CliCommand() {
     delete ui;
 }
 
-bool CliCommand::addCommand(std::string name) {
+bool CliCommand::addCommand(const std::string& name) {
     if(_commands->stringList().indexOf(name.c_str()) == -1) {
         auto newList = _commands->stringList();
         newList << QString(name.c_str());
@@ -42,11 +53,9 @@ bool CliCommand::addCommand(std::string name) {
     }
 }
 
-void CliCommand::write(QString message) {
-    ui->history->addItem(message);
-    if(ui->history->count() > _historySize) {
-        delete ui->history->takeItem(0);
-    }
+void CliCommand::write(const QString& message) {
+    ui->history->setHtml(ui->history->toHtml() + message);
+    ui->history->verticalScrollBar()->setValue(ui->history->verticalScrollBar()->maximum());
 }
 
 void CliCommand::onReturnPressed() {
@@ -76,19 +85,23 @@ void CliCommand::onReturnPressed() {
         }
         else if(hasMatch) {
             varFind = text.split("=");
-            Settings::inst = Settings::instance();
-            std::unordered_map<std::string, double>::iterator it1;
 
             if(checkParam(varFind[0])) {
-                write(QString("Value of %1 = %2").arg(varFind[0]).arg(varFind[1].toFloat()));
-                Settings::setVal(varFind[0].toStdString(),varFind[1].toFloat());    
+                /*write(QString("Value of %1 = %2").arg(varFind[0]).arg(varFind[1].toFloat()));
+                lc::storage::Settings::setVal(varFind[0].toStdString(),varFind[1].toFloat());*/
             }
             else {
                 write(QString("No such variable."));
             }
         }
         else {
-            enterCommand(text);
+            /* Check for command status and nested command like 'zoom or 'pan which can run in between some other active command.*/
+            if ((_commandActive) && (text.indexOf("'") != 0)) {
+                emit textEntered(text);
+            }
+            else {
+                enterCommand(text); 
+            }
         }
     }
 
@@ -100,7 +113,7 @@ void CliCommand::keyPressEvent(QKeyEvent *event) {
     onKeyPressed(event);
 }
 
-void CliCommand::enterCommand(QString command) {
+void CliCommand::enterCommand(const QString& command) {
     auto completion = _completer->currentCompletion();
 
     if(command.compare(completion, Qt::CaseInsensitive) == 0) {
@@ -109,18 +122,17 @@ void CliCommand::enterCommand(QString command) {
     }
     else {
         if(checkParam(command)) {
-            write(QString("Value of %1=%2").arg(command).arg(Settings::val(command.toStdString())));
+            //write(QString("Value of %1=%2").arg(command).arg(lc::storage::Settings::val(command.toStdString())));
         }
         else
         {
             write("Command " + command + " not found");
-            ui->history->item(ui->history->count() - 1)->setForeground(Qt::red);
         }
     }
 }
 
-bool CliCommand::checkParam(QString command) {
-    return Settings::exists(command.toStdString());
+bool CliCommand::checkParam(const QString& command) {
+    return false;//lc::storage::Settings::exists(command.toStdString());
 }
 
 void CliCommand::enterCoordinate(QString coordinate) {
@@ -185,16 +197,30 @@ void CliCommand::onKeyPressed(QKeyEvent *event) {
             }
             break;
 
+        case Qt::Key_Escape:
+            emit finishOperation();
+            break;
+
         default:
             ui->command->event(event);
             break;
     }
 }
 
-void CliCommand::setText(QString text) {
+void CliCommand::setText(const QString& text) {
     ui->command->setText(text);
 }
 
 void CliCommand::returnText(bool returnText) {
     _returnText = returnText;
+}
+
+void CliCommand::commandActive(bool commandActive) {
+    _commandActive = commandActive;
+}
+
+void CliCommand::closeEvent(QCloseEvent* event)
+{
+	this->widget()->hide();
+	event->ignore();
 }

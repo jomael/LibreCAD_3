@@ -10,83 +10,101 @@ setmetatable(ArcOperations, {
     end,
 })
 
-function ArcOperations:_init(widget)
-    self.center = nil
-    self.radius = nil
-    self.beginAngle = nil
-    self.endAngle = nil
-    self.entity_id = ID():id()
 
-    CreateOperations._init(self, widget)
-
-    message("Click on center", widget)
+function ArcOperations:_init(id)
+    CreateOperations._init(self, id, lc.builder.ArcBuilder, "ArcWith3Points")
+    cli_get_text(self.target_widget, true)
+    self.builder:setRadius(10)
+    self.Arc_FirstPoint = nil
+    self.Arc_SecondPoint = nil
+    self.Arc_ThirdPoint = nil
+    self.Arc_Center = nil
 end
 
-function ArcOperations:onEvent(eventName, event)
-    if(Operations.forMe(self, event) == false) then
-        return
+function ArcOperations:_init_default()
+    message("<b>Arc</b>", self.target_widget)
+    message("Options: <u>C</u>enter, or", self.target_widget)
+    message("Provide Start Point:", self.target_widget)
+	self.step = "ArcWith3Points"
+end
+
+function ArcOperations:_init_3p()
+    message("<b>Arc 3 point</b>", self.target_widget)
+    message("Provide Start Point:", self.target_widget)
+	self.step = "ArcWith3Points"
+end
+
+function ArcOperations:_init_cse()
+    message("<b>Arc 3 point</b>", self.target_widget)
+    message("Provide Center Point:", self.target_widget)
+	self.step = "ArcWithCSE"
+end
+
+function ArcOperations:ArcWith3Points(eventName, data)
+    if(eventName == "text") then
+        if (string.lower(data["text"]) == "c" or string.lower(data["text"]) == "center") then
+            message("Provide Center Point:", self.target_widget)
+            self.step = "ArcWithCSE"
+        else
+            message("Invalid input:" .. data["text"] ,self.target_widget)
+            message("Provide Radius:", self.target_widget)
+        end
+    elseif (eventName == "point" and not self.Arc_FirstPoint) then
+        self.Arc_FirstPoint = data['position']
+        message("Provide Through Point:", self.target_widget)
+    elseif(eventName == "point" and self.Arc_FirstPoint and not self.Arc_SecondPoint) then
+        message("Provide End Point:", self.target_widget)
+        self.Arc_SecondPoint = data['position']
+    elseif(eventName == "mouseMove" and self.Arc_FirstPoint and self.Arc_SecondPoint and not self.Arc_ThirdPoint) then
+        self.builder:setIsCCW(self:CheckCCW(self.Arc_FirstPoint, self.Arc_SecondPoint, data["position"]))
+        self.builder:setCenter(self:Circumcenter(self.Arc_FirstPoint, self.Arc_SecondPoint, data['position']))
+        self.builder:setRadius(self.builder:center():distanceTo(data['position']))
+        self.builder:setStartAngle(Operations:getAngle(self.builder:center(), self.Arc_FirstPoint))
+        self.builder:setEndAngle(Operations:getAngle(self.builder:center(), data["position"]))
+
+    elseif(eventName == "point" and self.Arc_FirstPoint and self.Arc_SecondPoint and not self.Arc_ThirdPoint) then
+        self.Arc_ThirdPoint = data['position']
+        self.builder:setIsCCW(self:CheckCCW(self.Arc_FirstPoint, self.Arc_SecondPoint, self.Arc_ThirdPoint))
+        self.builder:setCenter(self:Circumcenter(self.Arc_FirstPoint, self.Arc_SecondPoint, self.Arc_ThirdPoint))
+        self.builder:setRadius(self.builder:center():distanceTo(self.Arc_ThirdPoint))
+        self.builder:setStartAngle(Operations:getAngle(self.builder:center(), self.Arc_FirstPoint))
+        self.builder:setEndAngle(Operations:getAngle(self.builder:center(), data["position"]))
+        self:createEntity()
     end
+end
 
-    if(eventName == "point" or eventName == "number") then
-        self:newData(event["position"])
-    elseif(eventName == "mouseMove") then
-        self:createTempArc(event["position"])
+
+
+function ArcOperations:ArcWithCSE(eventName, data) -- Create Arc with Center Start and End Points.
+    if(eventName == "point" and not self.Arc_Center) then
+        self.Arc_Center = data["position"]
+        self.builder:setCenter(data["position"])
+        message("Provide Start Point:", self.target_widget)
+    elseif(eventName == "point" and self.Arc_Center and not self.Arc_FirstPoint) then
+        self.Arc_FirstPoint = data["position"]
+        self.builder:setRadius(Operations:getDistance(self.builder:center(), data["position"]))
+        message("Provide End Point:", self.target_widget)
+    elseif(eventName == "mouseMove" and self.Arc_Center and self.Arc_FirstPoint and not self.Arc_ThirdPoint) then
+        self.builder:setStartAngle(Operations:getAngle(self.builder:center(), self.Arc_FirstPoint))
+        self.builder:setEndAngle(Operations:getAngle(self.builder:center(), data["position"]))
+    elseif(eventName == "point" and self.Arc_Center and self.Arc_FirstPoint and not self.Arc_ThirdPoint) then
+        self.builder:setStartAngle(Operations:getAngle(self.builder:center(), self.Arc_FirstPoint))
+        self.builder:setEndAngle(Operations:getAngle(self.builder:center(), data["position"]))
+        self:createEntity()
     end
 end
 
-function ArcOperations:newData(point)
-    if(self.center == nil) then
-        self.center = point
-
-        message("Click on second point or enter the radius", self.target_widget)
-    elseif(self.radius == nil) then
-        self.radius = Operations:getDistance(self.center, point)
-        message("Click on start point or enter the start angle", self.target_widget)
-    elseif(self.beginAngle == nil) then
-        self.beginAngle = Operations:getAngle(self.center, point)
-        message("Click on end point or enter the end angle", self.target_widget)
-    else
-        self.endAngle = Operations:getAngle(self.center, point)
-        self:createArc()
-    end
+function ArcOperations:Circumcenter(Point1,Point2,Point3)
+    local Angle1=Point1:angleBetween(Point2,Point3)
+    local Angle2=Point2:angleBetween(Point3,Point1)
+    local Angle3=Point3:angleBetween(Point1,Point2)
+    local X = (Point1:x() * math.sin(2 * Angle1) + Point2:x() * math.sin(2 * Angle2) + Point3:x() * math.sin(2 * Angle3) ) / ( math.sin(2 * Angle1) + math.sin(2 * Angle2) + math.sin(2 * Angle3))
+    local Y = (Point1:y() * math.sin(2 * Angle1) + Point2:y() * math.sin(2 * Angle2) + Point3:y() * math.sin(2 * Angle3) ) / ( math.sin(2 * Angle1) + math.sin(2 * Angle2) + math.sin(2 * Angle3))
+    local Output=lc.geo.Coordinate(X,Y)
+    return Output
 end
 
-function ArcOperations:getArc(center, radius, beginAngle, endAngle)
-    local layer = active_layer(self.target_widget)
-    local metaInfo = active_metaInfo(self.target_widget)
-    local a = Arc(center, radius, beginAngle, endAngle, false, layer, metaInfo)
-    a:setId(self.entity_id)
-
-    return a
-end
-
-function ArcOperations:createTempArc(point)
-    local center = self.center
-    local radius = self.radius
-    local beginAngle = self.beginAngle
-    local endAngle = self.endAngle
-
-    if(center == nil) then
-        center = point
-    elseif(radius == nil) then
-        radius = Operations:getDistance(center, point)
-    elseif(beginAngle == nil) then
-        beginAngle = Operations:getAngle(center, point)
-    elseif(endAngle == nil) then
-        endAngle = Operations:getAngle(center, point)
-    end
-
-    radius = radius or 0
-    beginAngle = beginAngle or 0
-    endAngle = endAngle or 0.5 * math.pi
-
-    self.entity = self:getArc(center, radius, beginAngle, endAngle)
-    self:refreshTempEntity()
-end
-
-function ArcOperations:createArc()
-    local a = self:getArc(self.center, self.radius, self.beginAngle, self.endAngle)
-    self:createEntity(a)
-
-    CreateOperations.close(self)
+function ArcOperations:CheckCCW(P1,P2,P3)
+    local K = ((P2:y() - P1:y()) * ( P3:x() - P2:x() ) ) - ( (P2:x() - P1:x() ) * ( P3:y() - P2:y() ) )
+    if (K > 0) then return false else return true end
 end

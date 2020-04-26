@@ -1,17 +1,15 @@
 #pragma once
 
+#include <cad/builders/dimension.h>
 #include "cad/geometry/geocoordinate.h"
 #include "cad/primitive/textconst.h"
 #include "cad/base/cadentity.h"
 
 namespace lc {
     namespace entity {
-
-
         /**
         * Base class for all dimensions
         * It takes in the values pretty much as given by the DXF reference
-        * TODO: Should we move some variables to the implementation of an actual Dimension like DimRadial and have all optional variables as part of the meta map?
         */
         class Dimension {
 
@@ -28,10 +26,13 @@ namespace lc {
              * @param explicitValue given value
              */
 
-            Dimension(geo::Coordinate const &definitionPoint, geo::Coordinate const &middleOfText,
-                      TextConst::AttachmentPoint const &attachmentPoint, double const textAngle,
-                      double lineSpacingFactor, TextConst::LineSpacingStyle const &lineSpacingStyle,
-                      std::string const &explicitValue);
+            Dimension(geo::Coordinate definitionPoint,
+                      geo::Coordinate middleOfText,
+                      TextConst::AttachmentPoint attachmentPoint,
+                      double textAngle,
+                      double lineSpacingFactor,
+                      TextConst::LineSpacingStyle lineSpacingStyle,
+                      std::string explicitValue);
 
             /**
              * @brief Dimension
@@ -40,15 +41,19 @@ namespace lc {
              * @param attachmentPoint Where the text is located in reference to the text location
              * @param angle Angle of obliqueness
              */
-            Dimension(geo::Coordinate const &_definitionPoint,
-                      geo::Coordinate const &_middleOfText,
-                      TextConst::AttachmentPoint _attachPt,
-                      double _angle);
+            Dimension(geo::Coordinate definitionPoint,
+                      geo::Coordinate middleOfText,
+                      TextConst::AttachmentPoint attachmentPoint,
+                      double textAngle);
 
 
-            Dimension(Dimension const &other);
+            Dimension(const Dimension& other);
+
+        protected:
+            Dimension(const builder::DimensionBuilder& builder);
 
         public:
+            //TODO: re-enable those methods
             /**
              * @brief move, moves by an offset
              * @param geo::Coordinate offset
@@ -127,6 +132,3 @@ namespace lc {
         DECLARE_SHORT_SHARED_PTR(Dimension)
     }
 }
-
-// Dimension_H
-

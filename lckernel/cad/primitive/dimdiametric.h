@@ -9,10 +9,12 @@
 #include "cad/math/lcmath.h"
 #include <cad/primitive/point.h>
 #include "cad/interface/draggable.h"
+#include <cad/builders/dimdiametric.h>
 
 namespace lc {
     namespace entity {
         class DimDiametric : public std::enable_shared_from_this<DimDiametric>, public CADEntity, public Dimension, virtual public Visitable, public Draggable {
+        friend class lc::builder::DimDiametricBuilder;
         public:
             /**
             * @brief DimDiametric
@@ -21,36 +23,24 @@ namespace lc {
             * @param Layer_CSPtr layer
             * @param MetaTypes_CSPtr metaTypes
             */
-            DimDiametric(geo::Coordinate const &definitionPoint,
-                         geo::Coordinate const &middleOfText,
-                         TextConst::AttachmentPoint const &attachmentPoint,
+            DimDiametric(geo::Coordinate definitionPoint,
+                         geo::Coordinate middleOfText,
+                         TextConst::AttachmentPoint attachmentPoint,
                          double angle,
-                         double const lineSpacingFactor,
-                         TextConst::LineSpacingStyle const &lineSpacingStyle,
-                         std::string const &explicitValue,
-                         geo::Coordinate const &definitionPoint2,
-                         const double leader,
-                         const Layer_CSPtr layer,
-                         const MetaInfo_CSPtr metaInfo = nullptr,
-                         const Block_CSPtr block = nullptr
+                         double lineSpacingFactor,
+                         TextConst::LineSpacingStyle lineSpacingStyle,
+                         std::string explicitValue,
+                         geo::Coordinate definitionPoint2,
+                         double leader,
+                         meta::Layer_CSPtr layer,
+                         meta::MetaInfo_CSPtr metaInfo = nullptr,
+                         meta::Block_CSPtr block = nullptr
             );
 
-            /**
-            * Simplified version that set's the midpoint to the middle of the radius and angle to the angle of  definitionPoint and definitionPoint2
-            */
-            DimDiametric(geo::Coordinate const &definitionPoint,
-                         TextConst::AttachmentPoint const &attachmentPoint,
-                         double const lineSpacingFactor,
-                         TextConst::LineSpacingStyle const &lineSpacingStyle,
-                         std::string const &explicitValue,
-                         geo::Coordinate const &definitionPoint2,
-                         const double leader,
-                         const Layer_CSPtr layer,
-                         const MetaInfo_CSPtr metaInfo = nullptr,
-                         const Block_CSPtr block = nullptr
-            );
+            DimDiametric(const DimDiametric_CSPtr& other, bool sameID = false);
 
-            DimDiametric(const DimDiametric_CSPtr other, bool sameID = false);
+        private:
+            DimDiametric(const lc::builder::DimDiametricBuilder& builder);
 
         public:
             /**
@@ -73,7 +63,7 @@ namespace lc {
             * @param double rotation_angle
             * @return CADEntity_CSPtr rotated entity
             */
-            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
             * @brief scale, scales the entity
@@ -93,11 +83,11 @@ namespace lc {
             */
             virtual const geo::Area boundingBox() const override;
 
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
             double leader() const;
 
-            geo::Coordinate definitionPoint2() const;  // Where definitionPoint is a edge, definitionPoint2 specifies the opposite ege. The mid point would be the center point.
+            geo::Coordinate definitionPoint2() const;  // Where definitionPoint is an edge, definitionPoint2 specifies the opposite edge. The mid point would be the center point.
 
         protected:
             const double _leader;

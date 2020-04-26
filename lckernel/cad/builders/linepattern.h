@@ -6,15 +6,17 @@
 #include <memory>
 
 namespace lc {
-    class DxfLinePatternByValue;
-    DECLARE_SHORT_SHARED_PTR(DxfLinePatternByValue)
+    namespace meta {
+        class DxfLinePatternByValue;
+
+        DECLARE_SHORT_SHARED_PTR(DxfLinePatternByValue)
+    }
 
     namespace builder {
         class LinePatternBuilder {
             public:
                 LinePatternBuilder();
-
-                virtual ~LinePatternBuilder();
+                virtual ~LinePatternBuilder() = default;
 
                 const std::string& name() const;
                 const std::string& description() const;
@@ -26,7 +28,7 @@ namespace lc {
                 LinePatternBuilder* addElement(double element);
 
                 bool checkValues();
-                DxfLinePatternByValue_CSPtr build();
+                meta::DxfLinePatternByValue_CSPtr build();
 
             private:
                 std::string _name;

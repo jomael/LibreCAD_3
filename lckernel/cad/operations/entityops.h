@@ -6,8 +6,10 @@
 #include <cad/base/cadentity.h>
 
 namespace lc {
-    class Document;
-    DECLARE_SHORT_SHARED_PTR(Document)
+    namespace storage {
+        class Document;
+        DECLARE_SHORT_SHARED_PTR(Document)
+    }
 
     namespace operation {
         /**
@@ -19,10 +21,10 @@ namespace lc {
 
         class Base {
             public:
-                virtual ~Base();
+                virtual ~Base() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document>,
+                    const std::shared_ptr<storage::Document> document,
                     const std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
@@ -49,12 +51,12 @@ namespace lc {
         */
         class Loop : public Base {
             public:
-                Loop(const int numTimes);
+                Loop(int numTimes);
 
-                virtual ~Loop();
+                virtual ~Loop() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const Document_SPtr document,
+                    const storage::Document_SPtr document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
@@ -87,10 +89,10 @@ namespace lc {
             public:
                 Begin();
 
-                virtual ~Begin();
+                virtual ~Begin() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
@@ -123,12 +125,12 @@ namespace lc {
         */
         class Move : public Base {
             public:
-                Move(const geo::Coordinate& offset);
+                Move(geo::Coordinate offset);
 
-                virtual ~Move();
+                virtual ~Move() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
@@ -159,20 +161,19 @@ namespace lc {
         */
         class Copy : public Base {
             public:
-                Copy(const geo::Coordinate& offset);
+                Copy(geo::Coordinate offset);
 
-                virtual ~Copy();
+                virtual ~Copy() = default;
 
-                virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                std::vector<entity::CADEntity_CSPtr> process(
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
-                    const std::vector<Base_SPtr> operationStack);
+                    const std::vector<Base_SPtr> operationStack) override;
 
             private:
-                geo::Coordinate
-                _offset;
+                geo::Coordinate _offset;
         };
         DECLARE_SHORT_SHARED_PTR(Copy)
 
@@ -196,19 +197,18 @@ namespace lc {
         */
         class Rotate : public Base {
             public:
-                Rotate(const geo::Coordinate& rotation_center, const double rotation_angle);
+                Rotate(geo::Coordinate rotation_center, double rotation_angle);
 
-                virtual ~Rotate();
+                virtual ~Rotate() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
                     const std::vector<Base_SPtr> operationStack);
 
             private:
-
                 geo::Coordinate _rotation_center;
                 double _rotation_angle;
         };
@@ -216,20 +216,20 @@ namespace lc {
 
         class Scale : public Base {
             public:
-                Scale(const geo::Coordinate& scale_center, const geo::Coordinate& scale_factor);
+                Scale(geo::Coordinate scale_center, geo::Coordinate scale_factor);
 
-                virtual ~Scale();
+                virtual ~Scale() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
                     const std::vector<Base_SPtr> operationStack);
 
             private:
-                geo::Coordinate
-                _scale_center, _scale_factor;
+                geo::Coordinate _scale_center;
+                geo::Coordinate _scale_factor;
         };
         DECLARE_SHORT_SHARED_PTR(Scale)
 
@@ -257,10 +257,10 @@ namespace lc {
             public:
                 Push();
 
-                virtual ~Push();
+                virtual ~Push() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector<entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
@@ -287,19 +287,19 @@ namespace lc {
         */
         class SelectByLayer : public Base {
             public:
-                SelectByLayer(const Layer_CSPtr layer);
+                SelectByLayer(meta::Layer_CSPtr layer);
 
-                virtual ~SelectByLayer();
+                virtual ~SelectByLayer() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector <entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
                     const std::vector<Base_SPtr> operationStack);
 
             private:
-                Layer_CSPtr _layer;
+                meta::Layer_CSPtr _layer;
         };
         DECLARE_SHORT_SHARED_PTR(SelectByLayer)
 
@@ -324,17 +324,14 @@ namespace lc {
             public:
                 Remove();
 
-                virtual ~Remove();
+                virtual ~Remove() = default;
 
                 virtual std::vector<entity::CADEntity_CSPtr> process(
-                    const std::shared_ptr<Document> document,
+                    const std::shared_ptr<storage::Document> document,
                     std::vector<entity::CADEntity_CSPtr> entities,
                     std::vector <entity::CADEntity_CSPtr>& workingBuffer,
                     std::vector<entity::CADEntity_CSPtr>& removals,
                     const std::vector<Base_SPtr> operationStack);
-
-            private:
-                Layer_CSPtr _layer;
         };
         DECLARE_SHORT_SHARED_PTR(Remove)
     }

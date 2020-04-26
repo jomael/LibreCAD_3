@@ -4,7 +4,8 @@
 using namespace lc;
 using namespace builder;
 
-PointBuilder::~PointBuilder() {
+PointBuilder::PointBuilder() :
+        _coordinate() {
 
 }
 
@@ -19,5 +20,7 @@ PointBuilder* PointBuilder::setCoordinate(const geo::Coordinate& coordinate) {
 }
 
 entity::Point_CSPtr PointBuilder::build() {
+    checkValues(true);
+
     return entity::Point_CSPtr(new entity::Point(*this));
 }

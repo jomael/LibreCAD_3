@@ -1,23 +1,14 @@
 #pragma once
-#include <QScrollBar>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QKeyEvent>
-#include <lcadviewer.h>
+#include "lcadviewerproxy.h"
 #include "cad/meta/color.h"
-#include <cad/document/storagemanager.h>
+#include <cad/storage/storagemanager.h>
 
-#include "cad/document/document.h"
-#include "cad/document/undomanager.h"
+#include "cad/storage/document.h"
+#include "cad/storage/undomanager.h"
 #include <drawables/lccursor.h>
-#include <managers/snapmanager.h>
-#include <drawables/gradientbackground.h>
-#include <drawables/grid.h>
-#include <drawables/dragpoints.h>
-#include <drawables/tempentities.h>
-
-#include <managers/snapmanagerimpl.h>
-#include "cad/dochelpers/undomanagerimpl.h"
 
 #include <file.h>
 #include <managers/metainfomanager.h>
@@ -29,121 +20,131 @@ extern "C"
 #include "lauxlib.h"
 }
 
-#include "lua-intf/LuaIntf/LuaIntf.h"
+#include <kaguya/kaguya.hpp>
 
-class CadMdiChild : public QWidget {
-        Q_OBJECT
+namespace lc {
+    namespace ui {
+        class CadMdiChild : public QWidget {
+            Q_OBJECT
 
-    public:
-        explicit CadMdiChild(QWidget* parent = 0);
-        ~CadMdiChild();
+            public:
+                explicit CadMdiChild(QWidget* parent = 0);
 
-		/**
-		 * \brief Create a new document.
-		 */
-        void newDocument();
+                ~CadMdiChild();
 
-        /**
-         * \brief Load existing file.
-         * \param path Path to file
-         * \return bool True if the file was correctly opened, false otherwise.
-         */
-        bool openFile();
+                /**
+                 * \brief Create a new document.
+                 */
+                void newDocument();
 
-        /**
-         * \brief Give function to call when window is destroyed
-         * \param callback Lua function
-         */
-        void setDestroyCallback(LuaIntf::LuaRef callback);
+                /**
+                 * \brief Load existing file.
+                 * \param path Path to file
+                 * \return bool True if the file was correctly opened, false otherwise.
+                 */
+                bool openFile();
 
-		void keyPressEvent(QKeyEvent* event);
+                /**
+                 * \brief Give function to call when window is destroyed
+                 * \param callback Lua function
+                 */
+                void setDestroyCallback(kaguya::LuaRef destroyCallback);
 
-    public slots:
-        void ctxMenu(const QPoint& pos);
+                void keyPressEvent(QKeyEvent* event);
 
-	signals:
-		void keyPressed(QKeyEvent* event);
+                LCADViewerProxy* viewerProxy() {return _viewerProxy;};
 
-    public:
-        QWidget* view() const;
-        std::shared_ptr<lc::Document> document() const;
-        lc::UndoManager_SPtr undoManager() const;
-        LCViewer::SnapManager_SPtr  snapManager() const;
-        lc::StorageManager_SPtr storageManager() const;
-        LCViewer::LCADViewer* viewer() const {return _viewer;}
-        std::shared_ptr<LCViewer::Cursor> cursor() const;
+                lc::meta::Block_CSPtr activeViewport() const{return _viewerProxy->activeViewport();};
 
-        /**
-         * @brief Get the selected layer
-         * @return Selected layer
-         */
-        lc::Layer_CSPtr activeLayer() const;
+            public slots:
 
-        void setActiveLayer(const lc::Layer_CSPtr& activeLayer);
+                void ctxMenu(const QPoint& pos);
 
-        /**
-         * @brief Get the MetaInfo manager
-         * @return MetaInfoManager
-         */
-        lc::ui::MetaInfoManager_SPtr metaInfoManager() const;
+            signals:
 
-        /**
-         * \brief Get container of temporary entities
-         * \return Temporary entities container
-         */
-		LCViewer::TempEntities_SPtr tempEntities();
+                void keyPressed(QKeyEvent* event);
+                void keyPressEventx(int key); //temporary soln, need custom event handlers
+		
+            public:
+                QWidget* view() const;
 
-		/**
-		 * \brief Get selected entities
-		 * \return Selected entities
-		 * Return a vector of selected entities.
-		 * This function was added for Lua which can't access EntityContainer functions
-		 */
-		std::vector<lc::entity::CADEntity_SPtr> selection();
-        void saveFile();
+                std::shared_ptr<lc::storage::Document> document() const;
 
-        /**
-         * \brief Get window ID
-         * \return Window ID
-         * This is used by Lua to distinguish the different windows.
-         */
-        unsigned int id();
+                lc::storage::UndoManager_SPtr undoManager() const;
 
-        /**
-         * \brief Set window ID
-         * \param id Window ID
-         * This is used by Lua to distinguish the different windows.
-         * This function should not be used.
-         */
-        void setId(unsigned int id);
+                lc::viewer::manager::SnapManager_SPtr snapManager() const;
 
-        const LCViewer::SnapManagerImpl_SPtr &getSnapManager() const;
+                lc::storage::StorageManager_SPtr storageManager() const;
 
-    private:
-        unsigned int _id;
+                lc::ui::LCADViewer* viewer() { return _viewerProxy->viewer(); }
 
-        LuaIntf::LuaRef _destroyCallback;
+                std::shared_ptr<lc::viewer::drawable::Cursor> cursor() const;
 
-        std::shared_ptr<lc::Document> _document;
-        lc::UndoManagerImpl_SPtr _undoManager;
+                /**
+                 * @brief Get the selected layer
+                 * @return Selected layer
+                 */
+                lc::meta::Layer_CSPtr activeLayer() const;
 
-        std::shared_ptr<LCViewer::Grid> _grid;
-        std::shared_ptr<LCViewer::GradientBackground> _gradientBackground;
-        std::shared_ptr<LCViewer::Cursor>  _cursor;
-        LCViewer::SnapManagerImpl_SPtr  _snapManager;
+                void setActiveLayer(const lc::meta::Layer_CSPtr& activeLayer);
 
-        LCViewer::DragManager_SPtr _dragManager;
-        LCViewer::DragPoints_SPtr _dragPoints;
-        lc::StorageManager_SPtr _storageManager;
-		LCViewer::TempEntities_SPtr _tempEntities;
+                /**
+                 * @brief Get the MetaInfo manager
+                 * @return MetaInfoManager
+                 */
+                lc::ui::MetaInfoManager_SPtr metaInfoManager() const;
 
-		lc::Layer_CSPtr _activeLayer;
-		lc::ui::MetaInfoManager_SPtr _metaInfoManager;
+                /**
+                 * \brief Get container of temporary entities
+                 * \return Temporary entities container
+                 */
+                lc::viewer::drawable::TempEntities_SPtr tempEntities();
 
-        QScrollBar* horizontalScrollBar;
-        QScrollBar* verticalScrollBar;
+                /**
+                 * \brief Get selected entities
+                 * \return Selected entities
+                 * Return a vector of selected entities.
+                 * This function was added for Lua which can't access EntityContainer functions
+                 */
+                std::vector<lc::entity::CADEntity_CSPtr> selection();
 
-        LCViewer::LCADViewer* _viewer;
+                void saveFile();
+                void saveAsFile();
 
+                /**
+                 * \brief Get window ID
+                 * \return Window ID
+                 * This is used by Lua to distinguish the different windows.
+                 */
+                unsigned int id() const;
 
-};
+                /**
+                 * \brief Set window ID
+                 * \param id Window ID
+                 * This is used by Lua to distinguish the different windows.
+                 * This function should not be used.
+                 */
+                void setId(unsigned int id);
+
+                const viewer::manager::SnapManagerImpl_SPtr getSnapManager() const;
+
+		std::string getFilename() { return _filename; }
+
+            private:
+                std::string _filename;
+                unsigned int _id;
+		lc::persistence::File::Type _fileType = lc::persistence::File::Type::LIBDXFRW_DXF_R2000;
+
+                kaguya::LuaRef _destroyCallback;
+
+                std::shared_ptr<lc::storage::Document> _document;
+
+                storage::StorageManager_SPtr _storageManager;
+
+                meta::Layer_CSPtr _activeLayer;
+                ui::MetaInfoManager_SPtr _metaInfoManager;
+
+                ui::LCADViewerProxy* _viewerProxy;
+        };
+    }
+}

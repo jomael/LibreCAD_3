@@ -3,14 +3,6 @@
 
 using namespace lc::builder;
 
-ArcBuilder::ArcBuilder() {
-
-}
-
-ArcBuilder::~ArcBuilder() {
-
-}
-
 const lc::geo::Coordinate& ArcBuilder::center() const {
     return _center;
 }
@@ -57,5 +49,7 @@ ArcBuilder* ArcBuilder::setIsCCW(bool isCCW) {
 }
 
 lc::entity::Arc_CSPtr ArcBuilder::build() {
+    checkValues(true);
+
     return entity::Arc_CSPtr(new entity::Arc(*this));
 }

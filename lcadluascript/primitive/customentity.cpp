@@ -14,7 +14,7 @@ LuaCustomEntity::LuaCustomEntity(const lc::builder::CustomEntityBuilder& builder
         _dragPointRelease(builder.dragPointsReleasedFunction()) {
 }
 
-LuaCustomEntity::LuaCustomEntity(Insert_CSPtr insert, LuaCustomEntity_CSPtr customEntity, bool sameID) :
+LuaCustomEntity::LuaCustomEntity(const Insert_CSPtr& insert, const LuaCustomEntity_CSPtr& customEntity, bool sameID) :
     CustomEntity(insert, sameID),
     _snapPoints(customEntity->_snapPoints),
     _nearestPoint(customEntity->_nearestPoint),
@@ -41,7 +41,7 @@ geo::Coordinate LuaCustomEntity::nearestPointOnPath(const geo::Coordinate& coord
     return nearestPointDupl.call<geo::Coordinate>(shared_from_this(), coord);
 }
 
-CADEntity_CSPtr LuaCustomEntity::modifyInsert(CADEntity_CSPtr insert) const {
+CADEntity_CSPtr LuaCustomEntity::modifyInsert(const CADEntity_CSPtr& insert) const {
     auto i = std::dynamic_pointer_cast<const Insert>(insert);
 
     if(!i) {
@@ -71,7 +71,7 @@ CADEntity_CSPtr LuaCustomEntity::mirror(const geo::Coordinate& axis1, const geo:
     return modifyInsert(Insert::mirror(axis1, axis2));
 }
 
-CADEntity_CSPtr LuaCustomEntity::modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const {
+CADEntity_CSPtr LuaCustomEntity::modify(meta::Layer_CSPtr layer, const meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const {
     return modifyInsert(Insert::modify(layer, metaInfo, block));
 }
 
@@ -92,5 +92,5 @@ void LuaCustomEntity::onDragPointRelease(lc::operation::Builder_SPtr builder) co
 
 void LuaCustomEntity::setDragPoint(lc::geo::Coordinate position) const {
     auto newDragPointDupl = _newDragPoint;
-    return newDragPointDupl(shared_from_this(), position);
+    newDragPointDupl(shared_from_this(), position);
 }

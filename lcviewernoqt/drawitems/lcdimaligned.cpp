@@ -2,20 +2,20 @@
 #include "../lcdrawoptions.h"
 #include "lcdimaligned.h"
 #include "endcaps.h"
-#include <cad/functions/string_helper.h>
+#include <cad/tools/string_helper.h>
 
-using namespace LCViewer;
+using namespace lc::viewer;
 
-LCDimAligned::LCDimAligned(const lc::entity::DimAligned_CSPtr dimAligned) :
+LCDimAligned::LCDimAligned(const lc::entity::DimAligned_CSPtr& dimAligned) :
         LCVDrawItem(dimAligned, true),
         _dimAligned(dimAligned) {
 }
 
 void LCDimAligned::draw(LcPainter &painter, const LcDrawOptions &options, const lc::geo::Area &rect) const {
     const double capSize = 10.;
-
+ 
     // Decide to show the explicit value or the measured value
-    std::string value = lc::StringHelper::dim_value(
+    std::string value = lc::tools::StringHelper::dim_value(
             _dimAligned->explicitValue(),
             options.alignedFormat(),
             _dimAligned->definitionPoint3().distanceTo(_dimAligned->definitionPoint2())
@@ -47,12 +47,12 @@ void LCDimAligned::draw(LcPainter &painter, const LcDrawOptions &options, const 
         painter.line_to(p2.x(), p2.y());
         painter.line_to(_dimAligned->definitionPoint2().x(), _dimAligned->definitionPoint2().y());
         
-        
-        /* draw a nice line for text
+       /* draw a nice line for text
          */
         if (std::abs(d0ext.angleTo(p2ext)) >= 90. / 180.*M_PI) {
             painter.move_to(d0ext.x() + te.width, d0ext.y());
             painter.line_to(d0ext.x(), d0ext.y());
+            painter.stroke();
             this->drawText(
                     value,
                     _dimAligned->textAngle(),
@@ -66,6 +66,7 @@ void LCDimAligned::draw(LcPainter &painter, const LcDrawOptions &options, const 
         else {
             painter.move_to(p2ext.x() + te.width, p2ext.y());
             painter.line_to(p2ext.x(), p2ext.y());
+            painter.stroke();
             this->drawText(
                     value,
                     _dimAligned->textAngle(),
@@ -77,7 +78,7 @@ void LCDimAligned::draw(LcPainter &painter, const LcDrawOptions &options, const 
             );
         }
 
-        painter.stroke();
+       // painter.stroke();
 
         // Draw arrows
         endCaps.render(

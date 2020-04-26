@@ -7,5 +7,9 @@
  * Used to remove dependencies of Qt Widget with Cairo.
  * \return LcPainter*
  */
-LCViewer::LcPainter* createCairoImagePainter(unsigned char* data, const unsigned int width, const unsigned int height);
-
+namespace lc {
+    namespace viewer {
+        LcPainter* createCairoImagePainter(unsigned char* data, const unsigned int width, const unsigned int height);
+        LcPainter* createOpenGLPainter(unsigned char* data, const unsigned int width, const unsigned int height);
+    }
+}

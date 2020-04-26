@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cad/document/document.h>
+#include <cad/storage/document.h>
 #include "cadentity.h"
 
 namespace lc {
@@ -8,26 +8,23 @@ namespace lc {
         class InsertBuilder : public CADEntityBuilder {
             public:
                 InsertBuilder();
+                virtual ~InsertBuilder() = default;
 
-                virtual ~InsertBuilder();
-
-                InsertBuilder* copy(entity::Insert_CSPtr insert);
-
-                const Block_CSPtr& displayBlock() const;
-                InsertBuilder* setDisplayBlock(const Block_CSPtr& displayBlock);
+                const meta::Block_CSPtr& displayBlock() const;
+                InsertBuilder* setDisplayBlock(const meta::Block_CSPtr& displayBlock);
 
                 const geo::Coordinate& coordinate() const;
                 InsertBuilder* setCoordinate(const geo::Coordinate& coordinate);
 
-                const Document_SPtr& document() const;
-                InsertBuilder* setDocument(const Document_SPtr& document);
+                const storage::Document_SPtr& document() const;
+                InsertBuilder* setDocument(const storage::Document_SPtr& document);
 
-                bool checkValues() override;
+                bool checkValues(bool throwExceptions = false) const override;
                 entity::Insert_CSPtr build();
 
             private:
-                Document_SPtr _document;
-                Block_CSPtr _displayBlock;
+                storage::Document_SPtr _document;
+                meta::Block_CSPtr _displayBlock;
                 geo::Coordinate _coordinate;
         };
     }

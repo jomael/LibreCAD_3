@@ -9,60 +9,68 @@
 #include <iostream>
 
 namespace lc {
-    class MetaLineWidth : public EntityMetaType {
-        public:
-            static const std::string LCMETANAME();
+    namespace meta {
+        class MetaLineWidth : public EntityMetaType {
+            public:
+                static const std::string LCMETANAME();
 
-            virtual const std::string id() const override;
+                virtual const std::string id() const override;
 
-        private:
-            friend std::ostream& operator<<(std::ostream& os, const MetaLineWidth& lineWidth) {
-                os << "MetaLineWidth()";
-                return os;
-            }
-    };
+		    private:
+				friend std::ostream& operator<<(std::ostream& os, const MetaLineWidth& lineWidth) {
+					os << "MetaLineWidth(LCMETANAME=" << lineWidth.LCMETANAME() << ";"
+						              << ((const EntityMetaType&) lineWidth) << ")";
+					return os;
+				}
+        };
 
-    class MetaLineWidthByBlock : public MetaLineWidth {
-        public:
-            MetaLineWidthByBlock();
-            virtual ~MetaLineWidthByBlock() = default;
+        class MetaLineWidthByBlock : public MetaLineWidth {
+            public:
+                MetaLineWidthByBlock();
 
-            virtual const std::string metaTypeID() const override;
+                virtual ~MetaLineWidthByBlock() = default;
 
-        private:
-            friend std::ostream& operator<<(std::ostream& os, const MetaLineWidthByBlock& lineWidth) {
-                os << "MetaLineWidthByBlock()";
-                return os;
-            }
-    };
+                virtual const std::string metaTypeID() const override;
+				
+		    private:
+				friend std::ostream& operator<<(std::ostream& os, const MetaLineWidthByBlock& lineWidthByBlock) {
+					os << "MetaLineWidthByBlock(" << ((const MetaLineWidth&) lineWidthByBlock) << ")";
+					return os;
+				}
+        };
 
-    class MetaLineWidthByValue : public MetaLineWidth, public DocumentMetaType {
-        public:
+        class MetaLineWidthByValue : public MetaLineWidth, public DocumentMetaType {
+            public:
 
-            MetaLineWidthByValue();
-            MetaLineWidthByValue(const double width);
-            virtual ~MetaLineWidthByValue() = default;
-            double width() const;
+                MetaLineWidthByValue();
 
-            virtual const std::string metaTypeID() const override;
+                MetaLineWidthByValue(const double width);
 
-            virtual const std::string id () const override {
-                return MetaLineWidthByValue::LCMETANAME() + "_" + std::to_string(_width);
-            }
+                virtual ~MetaLineWidthByValue() = default;
 
-            const std::string name() const override;
+                double width() const;
 
-        private:
-            double _width;
+                virtual const std::string metaTypeID() const override;
 
-        private:
-            friend std::ostream& operator<<(std::ostream& os, const MetaLineWidthByValue& lineWidth) {
-                os << "MetaLineWidthByValue(width=" <<  lineWidth.width() << ")";
-                return os;
-            }
-    };
+                virtual const std::string id() const override {
+                    return MetaLineWidthByValue::LCMETANAME() + "_" + std::to_string(_width);
+                }
 
-    DECLARE_SHORT_SHARED_PTR(MetaLineWidth)
-    DECLARE_SHORT_SHARED_PTR(MetaLineWidthByBlock)
-    DECLARE_SHORT_SHARED_PTR(MetaLineWidthByValue)
+                const std::string name() const override;
+
+            private:
+                double _width;
+
+				friend std::ostream& operator << (std::ostream& os, const MetaLineWidthByValue& lineWidthByValue) {
+					os << "MetaLineWidthByValue(" << ((const DocumentMetaType&) lineWidthByValue) << ";"
+			                                      << ((const MetaLineWidth&) lineWidthByValue) 
+						                          << "width=" << lineWidthByValue._width << ")";
+					return os;
+				}
+        };
+
+        DECLARE_SHORT_SHARED_PTR(MetaLineWidth)
+        DECLARE_SHORT_SHARED_PTR(MetaLineWidthByBlock)
+        DECLARE_SHORT_SHARED_PTR(MetaLineWidthByValue)
+    }
 }

@@ -3,6 +3,9 @@
 #include <cad/base/cadentity.h>
 
 namespace lc {
+    /**
+     * @brief Contains builders made for creating entities
+     */
     namespace builder {
         class CADEntityBuilder {
             public:
@@ -12,25 +15,26 @@ namespace lc {
                 CADEntityBuilder() :
                         _layer(nullptr),
                         _metaInfo(nullptr),
-                        _block(nullptr) {
+                        _block(nullptr),
+                        _id(nullptr) {
                 }
 
                 virtual ~CADEntityBuilder() {
-
-                }
+                    delete _id;
+                };
 
                 void copy(entity::CADEntity_CSPtr entity) {
                     _layer = entity->_layer;
                     _block = entity->_block;
                     _metaInfo = entity->_metaInfo;
-                    _id.setID(entity->id());
+                    _id->setID(entity->id());
                 }
 
                 /**
                  * @brief Get layer
                  * @return Layer
                  */
-                const Layer_CSPtr& layer() const {
+                const meta::Layer_CSPtr& layer() const {
                         return _layer;
                 }
 
@@ -38,15 +42,24 @@ namespace lc {
                  * @brief Set the layer
                  * @param layer New layer
                  */
-                void setLayer(const Layer_CSPtr& layer) {
+                void setLayer(const meta::Layer_CSPtr& layer) {
                         _layer = layer;
+                }
+
+                /**
+                 * @brief Set the layer
+                 * @param layer New layer
+                 */
+                void setLayer(meta::Layer_CSPtr&& layer) {
+                    _layer = layer;
+                    layer = nullptr;
                 }
 
                 /**
                  * @brief Get MetaInfo
                  * @return MetaInfo
                  */
-                const MetaInfo_CSPtr& metaInfo() const {
+                const meta::MetaInfo_CSPtr& metaInfo() const {
                         return _metaInfo;
                 }
 
@@ -54,15 +67,24 @@ namespace lc {
                  * @brief Set MetaInfo
                  * @param metaInfo new MetaInfo
                  */
-                void setMetaInfo(const MetaInfo_CSPtr& metaInfo) {
+                void setMetaInfo(const meta::MetaInfo_CSPtr& metaInfo) {
                         _metaInfo = metaInfo;
+                }
+
+                /**
+                 * @brief Set MetaInfo
+                 * @param metaInfo new MetaInfo
+                 */
+                void setMetaInfo(meta::MetaInfo_CSPtr&& metaInfo) {
+                    _metaInfo = metaInfo;
+                    metaInfo = nullptr;
                 }
 
                 /**
                  * @brief Get block
                  * @return Block
                  */
-                const Block_CSPtr& block() const {
+                const meta::Block_CSPtr& block() const {
                         return _block;
                 }
 
@@ -70,16 +92,29 @@ namespace lc {
                  * @brief Set the Block
                  * @param block Block
                  */
-                void setBlock(const Block_CSPtr& block) {
+                void setBlock(const meta::Block_CSPtr& block) {
                         _block = block;
+                }
+
+                /**
+                 * @brief Set the Block
+                 * @param block Block
+                 */
+                void setBlock(meta::Block_CSPtr&& block) {
+                    _block = block;
+                    block = nullptr;
                 }
 
                 /**
                  * @brief Get entity ID
                  * @return Entity ID
                  */
-                const ID_DATATYPE id() const {
-                    return  _id.id();
+                ID_DATATYPE id() const {
+                    if(_id == nullptr) {
+                        _id = new entity::ID();
+                    }
+
+                    return  _id->id();
                 }
 
                 /**
@@ -87,25 +122,43 @@ namespace lc {
                  * @param id Entity ID
                  */
                 void setID(ID_DATATYPE id) {
-                    _id.setID(id);
+                    if(_id == nullptr) {
+                        _id = new entity::ID(id);
+                    }
+                    else {
+                        _id->setID(id);
+                    }
                 }
 
                 /**
                  * @brief Generate new ID for the entity
                  */
                 void newID() {
-                    _id = ID();
+                    delete _id;
+                    _id = new entity::ID();
                 }
 
-                virtual bool checkValues() {
-                        return _layer != nullptr;
+                virtual bool checkValues(bool throwExceptions=false) const{
+                    if (_layer == nullptr)
+                    {
+                        if (throwExceptions) {
+                            throw std::runtime_error("Layer is NULL");
+                        }
+                        else {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
                 }
 
             private:
-                Layer_CSPtr _layer;
-                MetaInfo_CSPtr _metaInfo;
-                Block_CSPtr _block;
-                ID _id;
+                meta::Layer_CSPtr _layer;
+                meta::MetaInfo_CSPtr _metaInfo;
+                meta::Block_CSPtr _block;
+                mutable entity::ID* _id;
         };
     }
 }

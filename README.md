@@ -1,6 +1,8 @@
 LibreCAD_3
 ==========
 
+![Build status](https://api.travis-ci.org/LibreCAD/LibreCAD_3.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/github/LibreCAD/LibreCAD_3/badge.svg?branch=master)](https://coveralls.io/github/LibreCAD/LibreCAD_3?branch=master)
+
 LibreCAD 3 development (GSoC 2014)
 This is the new LibreCAD Kernel. With keeping in mind the extensibilty, modularity and the design, the LibreCAD is divided into 3 parts.  
 1) The UI  
@@ -14,22 +16,23 @@ Compilation Instructions
 Required libraries
 ----------
 
-1) cairo 
-2) Pango
-3) Qt 5
-4) git
-5) liblog4cxx
-6) Google test
-7) Eigen 3
-8) Lua >= 5.2
-9) Curl
-10) Boost
-11) LibDxfRW (see compilation instruction after)
+1) Qt 5
+2) git
+3) Google test
+4) Eigen 3
+5) Lua >= 5.2
+6) Curl
+7) Boost
+8) LibDxfRW (see compilation instruction after)
+9) GLEW
+10) glm
+11) GLU
+12) OpenGL
 
 LibDxfRW compilation
 ----------
 ```
-git clone https://github.com/rvt/libdxfrw
+git clone https://github.com/LibreCAD/libdxfrw
 cd libdxfrw
 mkdir release
 cd release
@@ -44,11 +47,17 @@ LibreCAD compilation
 ```
 git clone --recursive https://github.com/LibreCAD/LibreCAD_3.git
 
+cd LibreCAD_3
+
+git submodule init
+
+git submodule update --recursive --remote
+
 mkdir build
 cd build
 cmake .. (for a release you would use cmake -DCMAKE_BUILD_TYPE=Release ..)
 make -j 4
-./lcUI/librecad
+./bin/librecad
 ```
 
 OSX MacPorts
@@ -60,7 +69,7 @@ mkdir build
 cd build
 /opt/local/bin/cmake -DCMAKE_CXX_COMPILER=/opt/local/bin/g++ -DCMAKE_C_COMPILER=/opt/local/bin/gcc ..
 make -j 4
-./lcUI/librecad
+./bin/librecad
 ```
 
 For a release build you would do:
@@ -97,10 +106,23 @@ Ubuntu/Mint
 ========
 
 ```
-apt-get install qttools5-dev qttools5-dev-tools libqt5opengl5-dev liblua5.2-dev git g++ gcc-4.8 libcairo2-dev liblog4cxx10-dev libpango-1.0-0 libpango1.0-dev libboost-all-dev libqt5svg5 libgtest-dev libeigen3-dev libcurl4-gnutls-dev libgtk-3-dev
+apt-get install qttools5-dev qttools5-dev-tools libqt5opengl5-dev liblua5.2-dev git g++ gcc-4.8 libcairo2-dev libpango-1.0-0 libpango1.0-dev libboost-all-dev libqt5svg5 libgtest-dev libeigen3-dev libcurl4-gnutls-dev libgtk-3-dev libglew-dev libglm-dev libqt5opengl5-dev libqt5svg5-dev
 ```
 
-You need to compile Google Test in /usr/src/gtest/ and move the libraries in /usr/lib/
+Optional dependencies for Cairo painter:
+```
+apt-get install libcairo2-dev libpango-1.0-0 libpango1.0-dev libgtk-3-dev
+```
+
+You need to compile Google Test in /usr/src/gtest/ :
+```
+mkdir /tmp/gtest
+cd /tmp/gtest
+cmake /usr/src/gtest
+make
+sudo cp libgtest.a /usr/lib/
+sudo cp libgtest_main.a /usr/lib/
+```
 
 ### Ubuntu 14.xx
 GCC version from Ubuntu 14 doesn't support C++14. You need to install GCC 4.9.
@@ -109,45 +131,118 @@ http://askubuntu.com/a/456849
 Windows
 ========
 
-### Bash for Windows 10
-This is the only way to get LibreCAD running on Windows at the moment.
-1) Follow the instructions for Ubuntu 14.04.
+# Visual Studio
+Install Visual Studio with:
+- C++
+- CMake for Windows
+- Windows SDK
 
-2) Install Xming or any other X server for Windows
-
-3) Enter `export DISPLAY=:0` before running LibreCAD
-
-### MSYS2
-
+# Clone the repository
+Using Git Bash (or any other command line git command): 
 ```
-pacman -S mingw-w64-x86_64-cairo mingw-w64-x86_64-pango mingw-w64-x86_64-lua mingw-w64-x86_64-eigen3 mingw-w64-x86_64-apr mingw-w64-x86_64-apr-util mingw-w64-x86_64-qt5 mingw-w64-x86_64-gtest
+git clone --recursive https://github.com/LibreCAD/LibreCAD_3.git
 ```
 
-#### Log4CXX:
+Using any GUI git client:
+Clone https://github.com/LibreCAD/LibreCAD_3.git recursively.
 
-Use lastest code from repo : git://git.apache.org/log4cxx.git
-https://issues.apache.org/jira/browse/LOGCXX-463
+# Using Conan (recommended)
+Conan is a package manager which provides C++ dependencies, compatible with Windows and Visual Studio. We recommend using it to simplify the compilation process.
 
-Put the source in /third_party/apache-log4cxx
+## Conan
+Download and install [Conan](https://conan.io/downloads.html).
 
+## Dependencies
+Open a terminal inside the `LibreCAD_3` repository folder.
+Add the bincrafters repository
 ```
-./autogen.sh
-./configure
-make
-make install
-```
-
-#### LibreCAD:
-
-```
-mkdir build
-cd build
-cmake -DWINDOWS_MSYS2=ON ..
+conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan 
 ```
 
-Create symlinks for .so files with ```ln -s ../lc*/lib*.so```
+Download and install the dependencies (in a terminal inside LibreCAD_3 folder):
+```
+mkdir conan
+cd conan
+conan install ..
+```
 
-Replace paths in build/lcUI/path.lua with Windows-style paths ```C:\msys64\…```
+**Not all dependencies are available (see https://github.com/conan-io/wishlist/issues/124). They have to be installed manually (see next section)**
+Those dependencies are:
+- libdxfrw
+- Qt (version provided by binutils does not contains SVG/UiTools)
+
+## Configuration
+Change build type to RelWithDebInfo. Debug won't work as Conan libraries are compiled in release mode.
+
+Set CMake command arguments to and adapt to your configuration:
+```
+-DLIBDXFRW_PATH=......./libdxfrw/out/install/x64-Debug 
+-DCMAKE_PREFIX_PATH=C:\Qt\5.14.1\msvc2017_64\lib\cmake
+```
+
+
+# Manual installation
+## Dependencies 
+
+### Boost
+Download prebuilt Windows binaries for Boost from: https://sourceforge.net/projects/boost/files/boost-binaries/
+
+### Eigen 3
+Download Eigen 3 zip archive from https://gitlab.com/libeigen/eigen 
+Unzip it on your disk (`C:\local\eigen-3.3.7`)
+
+### Qt
+Download and install Qt (open source version) from https://www.qt.io/download
+You must select at least one version of Qt for the MSVC compiler and the correct architecture.
+
+Add Qt `bin` folder (`C:\Qt\5.14.1\msvc2017_64\bin`) to the PATH environment variable.
+
+### Lua
+Download Windows binaries (dll15) here: https://sourceforge.net/projects/luabinaries/files/5.3.5/Windows%20Libraries/Dynamic/
+Unzip it on your disk (`C:\local\lua-5.3.5`)
+
+### GLEW
+Download Windows binaries from glew.sourceforge.net
+Unzip this archive on your disk (`C:\local\glew-2.1.0`)
+
+The `GLEW_ROOT` environment variable (in Windows) should be set to where the archive was extracted, in this case `C:\local\glew-2.1.0`
+
+## Libdxfrw
+Clone libdxfrw repository:
+```
+git clone https://github.com/LibreCAD/libdxfrw
+```
+Open it as a folder in Visual Studio:
+- Build all
+- Install DXFRW
+
+Note the folder where it was installed (ex: `C:\Users\...\libdxfrw\out\install\x64-Debug`)
+
+## LibreCAD
+Open project as folder in Visual Studio
+
+In `Project > CMake Settings`, set the following CMake options, after adapting the paths to your environment:
+
+```
+-DBoost_ADDITIONAL_VERSIONS=1.71.0 
+-DBoost_COMPILER=-vc142 
+-DBOOST_LIBRARYDIR=C:\local\boost_1_71_0\lib64-msvc-14.2 
+-DEIGEN3_ROOT=C:\local\eigen-3.3.7 
+-DLIBDXFRW_PATH=C:\Users\ferag\Workspace\libdxfrw\out\install\x64-Debug 
+-DWITH_LIBOPENCAD=OFF
+-DGLEW_INCLUDE_DIR=C:\local\glew-2.1.0\include 
+-DFREETYPE_LIBRARY=C:\local\freetype-2.10.1\win64\freetype.lib 
+-DCMAKE_PREFIX_PATH=C:\Qt\5.13.1\msvc2017_64\lib\cmake 
+-DCMAKE_LIBRARY_PATH=C:\Qt\5.13.1\msvc2017_64\lib 
+-DWITH_LUACMDINTERFACE=FALSE 
+-DWITH_RENDERING_UNITTESTS=OFF 
+-DWITH_CAIRO=OFF 
+-DOPENGL_INCLUDE_DIR=C:\local\glm-0.9.9.6 
+-DWITH_UNITTESTS=OFF
+```
+`-DBoost` options were added because the latest version of Boost wasn't supported by CMake. They may not be necessary anymore.
+
+Add the folders containing the .dll files in your `PATH` environment variable
 
 Reading materials for feature usage
 =========

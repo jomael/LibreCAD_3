@@ -8,10 +8,6 @@ LineBuilder::LineBuilder() :
         _end() {
 }
 
-LineBuilder::~LineBuilder() {
-
-}
-
 const lc::geo::Coordinate& LineBuilder::start() const {
     return _start;
 }
@@ -31,5 +27,7 @@ LineBuilder* LineBuilder::setEnd(const lc::geo::Coordinate& end) {
 }
 
 lc::entity::Line_CSPtr LineBuilder::build() {
+    checkValues(true);
+
     return entity::Line_CSPtr(new entity::Line(*this));
 }

@@ -4,24 +4,24 @@
 #include "../events/snappointevent.h"
 #include "../managers/snapmanager.h"
 #include <string>
-#include <cad/functions/string_helper.h>
+#include <cad/tools/string_helper.h>
 
-using namespace LCViewer;
+using namespace lc;
+using namespace lc::viewer;
+using namespace lc::viewer::drawable;
 
-Cursor::Cursor(int cursorSize, std::shared_ptr<DocumentCanvas> view, const lc::Color& xAxisColor, const lc::Color& yAxisColor) : _xAxisColor(xAxisColor), _yAxisColor(yAxisColor), _cursorSize(cursorSize) {
-/*
-    connect(graphicsView, SIGNAL(drawEvent(const DrawEvent&)),
-            this, SLOT(on_Draw_Event(const DrawEvent&)));
+Cursor::Cursor(int cursorSize,
+               const std::shared_ptr<DocumentCanvas>& view,
+               const lc::Color& xAxisColor,
+               const lc::Color& yAxisColor) :
+        _xAxisColor(xAxisColor),
+        _yAxisColor(yAxisColor),
+        _cursorSize(cursorSize),
+        _locationEvent() {
 
-    connect(snapManager.get(), SIGNAL(snapPointEvent(const SnapPointEvent&)),
-            this, SLOT(on_SnapPoint_Event(const SnapPointEvent&)));
-
-    connect(graphicsView, SIGNAL(mouseReleaseEvent(const MouseReleaseEvent&)),
-            this, SLOT(on_MouseRelease_Event(const MouseReleaseEvent&)));
-*/
 }
 
-void Cursor::onDraw(DrawEvent const & event) const {
+void Cursor::onDraw(lc::viewer::event::DrawEvent const & event) const {
     double zeroCornerX = 0.;
     double zeroCornerY = 0.;
     event.painter().device_to_user(&zeroCornerX, &zeroCornerY);
@@ -35,7 +35,7 @@ void Cursor::onDraw(DrawEvent const & event) const {
     double x=0, y=0;
 
     // If we had a snao point, move the mouse to that area
-    if (_lastSnapEvent.status() == true) {
+    if (_lastSnapEvent.status()) {
         x = _lastSnapEvent.snapPoint().x();
         y = _lastSnapEvent.snapPoint().y();
     } else {
@@ -60,7 +60,7 @@ void Cursor::onDraw(DrawEvent const & event) const {
     /** Cursor added temporarily until we have a better system for this **/
     event.painter().source_rgb(1.,1.,1.);
     event.painter().move_to(x, y);
-    std::string foo = lc::StringHelper::string_format("%.2f,%.2f",x, y);
+    std::string foo = lc::tools::StringHelper::string_format("%.2f,%.2f",x, y);
     event.painter().font_size(12, true);
     event.painter().text(foo.c_str());
     event.painter().stroke();
@@ -69,15 +69,15 @@ void Cursor::onDraw(DrawEvent const & event) const {
     event.painter().restore();
 }
 
-void Cursor::onSnapPointEvent(SnapPointEvent const & event) {
+void Cursor::onSnapPointEvent(lc::viewer::event::SnapPointEvent const & event) {
     _lastSnapEvent = event;
 }
 
 
-Nano::Signal<void(const LocationEvent&)>& Cursor::locationEvents() {
+Nano::Signal<void(const lc::viewer::event::LocationEvent&)>& Cursor::locationEvents() {
     return _locationEvent;
 }
 
 lc::geo::Coordinate Cursor::position() const {
-	return lc::geo::Coordinate(_lastSnapEvent.snapPoint().x(), _lastSnapEvent.snapPoint().y());
+	return { _lastSnapEvent.snapPoint().x(), _lastSnapEvent.snapPoint().y() };
 }

@@ -2,23 +2,25 @@
 
 LuaQObject::LuaQObject(QObject* object):
 	_object(object),
+	_slotId(-1),
+	_signalId(-1),
 	_valid(false)
 {
 	//Connect QObject destroyed() signal
 	const int destroySignalId = _object->metaObject()->indexOfSignal("destroyed()");
-	QMetaObject::connect(_object, destroySignalId, this, metaObject()->methodCount());
+	QMetaObject::connect(_object, destroySignalId, this, metaObject()->methodCount()); //NOLINT
 }
 
 LuaQObject::~LuaQObject() {
-	_object = 0;
+	_object = nullptr;
 }
 
-bool LuaQObject::connect(int signalId, LuaIntf::LuaRef slot) {
+bool LuaQObject::connect(int signalId, const kaguya::LuaRef& slot) {
 	_signalId = signalId;
-	if(slot.isFunction()) {
+	if(slot.type() == LUA_TFUNCTION) {
 		_slotId = 1;
 		
-		if(QMetaObject::connect(_object, signalId, this, this->metaObject()->methodCount() + _slotId)) {
+		if(QMetaObject::connect(_object, signalId, this, this->metaObject()->methodCount() + _slotId) != nullptr) {
 			_slotFunction = slot;
 			_valid = true;
 		}
@@ -39,17 +41,17 @@ int LuaQObject::qt_metacall(QMetaObject::Call c, int id, void **a)
 	}
 	else if(id == _slotId) {
 		if(_slotFunction) {
-			LuaIntf::LuaState s = _slotFunction.state();
+			kaguya::State s(_slotFunction.state());
 			auto parameters = _object->metaObject()->method(_signalId).parameterTypes();
 			unsigned int i = 0;
 
-			_slotFunction.pushToStack();
-			for (auto parameter : parameters) {
+			_slotFunction.push();
+			for (const auto& parameter : parameters) {
 				i++;
 				pushArg(s, QMetaType::type(parameter.constData()), a[i]);
 			}
 
-			s.call(i, 0);
+			lua_call(s.state(), i, 0);
 		}
 
 		return -1;
@@ -64,14 +66,14 @@ std::string LuaQObject::objectName(QObject* object) {
 
 
 std::string LuaQObject::objectName() {
-	if(_object) {
+	if(_object != nullptr) {
 		return objectName(_object);
 	}
 
 	return "null";
 }
 
-QObject* LuaQObject::findChild(QObject* object, std::string name) {
+QObject* LuaQObject::findChild(QObject* object, const std::string& name) {
 	for(auto child : object->children()) {
 		if(objectName(child) == name) {
 			return child;
@@ -80,71 +82,71 @@ QObject* LuaQObject::findChild(QObject* object, std::string name) {
 
 	std::cout << "Child " << name << " not found." << std::endl;
 
-	return 0;
+	return nullptr;
 }
 
-QObject* LuaQObject::findChild(std::string name) {
-	if(_object) {
+QObject* LuaQObject::findChild(const std::string& name) {
+	if(_object != nullptr) {
 		return findChild(_object, name);
 	}
 
-	return 0;
+	return nullptr;
 }
 
-void LuaQObject::pushArg(LuaIntf::LuaState s, int const type, void const* arg) {
+void LuaQObject::pushArg(kaguya::State& s, int const type, void const* arg) {
 	if(type == qRegisterMetaType<lc::geo::Coordinate>()) {
-		s.push(*(lc::geo::Coordinate*) arg);
+		lua_pushlightuserdata(s.state(), (lc::geo::Coordinate*) arg);
 		return;
 	}
 
 	switch (type) {
 		case QMetaType::Void:
-			s.push(nullptr);
+			lua_pushnil(s.state());
 			break;
 		case QMetaType::Bool:
-			s.push(*(bool *) arg);
+			lua_pushboolean(s.state(), *(bool *) arg);
 			break;
 		case QMetaType::Int:
-			s.push(*(int *) arg);
+			lua_pushinteger(s.state(), *(int *) arg);
 			break;
 		case QMetaType::UInt:
-			s.push(*(unsigned int *) arg);
+			lua_pushinteger(s.state(), *(unsigned int *) arg);
 			break;
 		case QMetaType::Long:
-			s.push(*(long *) arg);
+			lua_pushinteger(s.state(), *(long *) arg);
 			break;
 		case QMetaType::LongLong:
-			s.push(*(long long *) arg);
+			lua_pushinteger(s.state(), *(long long *) arg);
 			break;
 		case QMetaType::Short:
-			s.push(*(short *) arg);
+			lua_pushinteger(s.state(), *(short *) arg);
 			break;
 		case QMetaType::Char:
-			s.push(*(char *) arg);
+			lua_pushinteger(s.state(), *(char *) arg);
 			break;
 		case QMetaType::ULong:
-			s.push(*(unsigned long *) arg);
+			lua_pushnumber(s.state(), *(unsigned long *) arg);
 			break;
 		case QMetaType::ULongLong:
-			s.push(*(unsigned long long *) arg);
+			lua_pushnumber(s.state(), *(unsigned long long *) arg);
 			break;
 		case QMetaType::UShort:
-			s.push(*(unsigned short *) arg);
+			lua_pushnumber(s.state(), *(unsigned short *) arg);
 			break;
 		case QMetaType::UChar:
-			s.push(*(unsigned char *) arg);
+			lua_pushnumber(s.state(), *(unsigned char *) arg);
 			break;
 		case QMetaType::Double:
-			s.push(*(double *) arg);
+			lua_pushnumber(s.state(), *(double *) arg);
 			break;
 		case QMetaType::Float:
-			s.push(*(float *) arg);
+			lua_pushnumber(s.state(), *(float *) arg);
 			break;
 		case QMetaType::QString:
-			s.push(reinterpret_cast<const QString *>(arg));
+			lua_pushlightuserdata(s.state(), const_cast<QString*>(static_cast<const QString*>(arg)));
 			break;
 		default:
-			s.push(nullptr);
+			lua_pushnil(s.state());
 			break;
 	}
 }

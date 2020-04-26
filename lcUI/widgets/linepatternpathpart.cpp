@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+using namespace lc::ui::widgets;
+
 LinePatternPathPart::LinePatternPathPart(QWidget* parent) :
     LinePatternPathPart(1, parent) {
 }
@@ -71,6 +73,6 @@ void LinePatternPathPart::onTypeChanged(const QString &value) {
     emit update();
 }
 
-void LinePatternPathPart::onValueChanged(double) {
+void LinePatternPathPart::onValueChanged(double value) {
     emit update();
 }

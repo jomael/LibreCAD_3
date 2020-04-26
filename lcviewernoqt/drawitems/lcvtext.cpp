@@ -3,9 +3,9 @@
 #include "../lcdrawoptions.h"
 #include <cad/primitive/textconst.h>
 
-using namespace LCViewer;
+using namespace lc::viewer;
 
-LCVText::LCVText(const lc::entity::Text_CSPtr text) :
+LCVText::LCVText(const lc::entity::Text_CSPtr& text) :
         LCVDrawItem(text, true),
         _text(text) {
 }

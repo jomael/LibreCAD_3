@@ -24,10 +24,10 @@ namespace lc {
             * @param Layer_CSPtr layer
             * @param MetaTypes_CSPtr metaTypes
             */
-            Point(geo::Coordinate const &coord,
-                  const Layer_CSPtr layer,
-                  const MetaInfo_CSPtr metaInfo = nullptr,
-                  const Block_CSPtr block = nullptr);
+            Point(geo::Coordinate coord,
+                  meta::Layer_CSPtr layer,
+                  meta::MetaInfo_CSPtr metaInfo = nullptr,
+                  meta::Block_CSPtr block = nullptr);
 
             /**
              * @brief Coordinate, Coordinate constructor with metatypes
@@ -36,10 +36,10 @@ namespace lc {
              * @param Layer_CSPtr layer
              * @param MetaTypes_CSPtr metaTypes
              */
-            Point(const double x, const double y,
-                  const Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo = nullptr, const Block_CSPtr block = nullptr);
+            Point(double x, double y,
+                  meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo = nullptr, meta::Block_CSPtr block = nullptr);
 
-            Point(const Point_CSPtr other, bool sameID = false);
+            Point(const Point_CSPtr& other, bool sameID = false);
 
         private:
             Point(const builder::PointBuilder& builder);
@@ -65,7 +65,7 @@ namespace lc {
              * @param double rotation_angle
              * @return CADEntity_CSPtr rotated entity
              */
-            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
              * @brief scale, scales the entity
@@ -85,7 +85,7 @@ namespace lc {
              */
             virtual const geo::Area boundingBox() const override;
 
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
         public:
             virtual void accept(GeoEntityVisitor &v) const override { v.visit(*this); }

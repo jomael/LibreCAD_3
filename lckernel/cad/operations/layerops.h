@@ -5,17 +5,19 @@
 #include "documentoperation.h"
 
 namespace lc {
-    class Document;
+    namespace storage {
+        class Document;
+    }
     namespace operation {
         /**
         * This class can be used to add or remove layers from the document
         */
         class AddLayer : public DocumentOperation {
             public:
-                AddLayer(std::shared_ptr<Document> document,  const Layer_CSPtr layer) ;
+                AddLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr layer) ;
 
-                virtual void undo() const;
-                virtual void redo() const;
+                void undo() const override;
+                void redo() const override;
 
             private:
 
@@ -23,7 +25,7 @@ namespace lc {
                 virtual void processInternal();
 
             private:
-                Layer_CSPtr _layer;
+                meta::Layer_CSPtr _layer;
         };
 
         /**
@@ -31,18 +33,18 @@ namespace lc {
         */
         class RemoveLayer : public DocumentOperation {
             public:
-                RemoveLayer(std::shared_ptr<Document> document,  const Layer_CSPtr layer) ;
+                RemoveLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr layer) ;
 
-                virtual void undo() const;
-                virtual void redo() const;
+                void undo() const override;
+                void redo() const override;
 
             private:
 
             protected:
-                virtual void processInternal();
+                void processInternal() override;
 
             private:
-                Layer_CSPtr _layer;
+                meta::Layer_CSPtr _layer;
                 std::vector<entity::CADEntity_CSPtr> _entities;
         };
 
@@ -51,19 +53,19 @@ namespace lc {
         */
         class ReplaceLayer : public DocumentOperation {
             public:
-                ReplaceLayer(std::shared_ptr<Document> document, const Layer_CSPtr oldLayer, const Layer_CSPtr newLayer) ;
+                ReplaceLayer(std::shared_ptr<storage::Document> document, meta::Layer_CSPtr oldLayer, meta::Layer_CSPtr newLayer) ;
 
-                virtual void undo() const;
-                virtual void redo() const;
+                void undo() const override;
+                void redo() const override;
 
             private:
 
             protected:
-                virtual void processInternal();
+                void processInternal() override;
 
             private:
-                Layer_CSPtr _oldLayer;
-                Layer_CSPtr _newLayer;
+                meta::Layer_CSPtr _oldLayer;
+                meta::Layer_CSPtr _newLayer;
         };
     }
 }

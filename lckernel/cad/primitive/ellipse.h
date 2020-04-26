@@ -10,6 +10,7 @@
 #include "cad/vo/entitycoordinate.h"
 
 #include <cad/meta/layer.h>
+#include <cad/builders/ellipse.h>
 
 namespace lc {
     namespace entity {
@@ -24,7 +25,11 @@ namespace lc {
          *
          * \date 2012-04-16
          */
-        class Ellipse : public std::enable_shared_from_this<Ellipse>, public CADEntity, public geo::Ellipse, public Snapable {
+        class Ellipse : public std::enable_shared_from_this<Ellipse>,
+                        public CADEntity,
+                        public geo::Ellipse,
+                        public Snapable {
+        friend class builder::EllipseBuilder;
         public:
             /**
              * @brief Create ellipse
@@ -44,12 +49,15 @@ namespace lc {
                     double startAngle,
                     double endAngle,
                     bool reversed,
-                    const Layer_CSPtr layer,
-                    const MetaInfo_CSPtr metaInfo = nullptr,
-                    const Block_CSPtr block = nullptr
+                    meta::Layer_CSPtr layer,
+                    meta::MetaInfo_CSPtr metaInfo = nullptr,
+                    meta::Block_CSPtr block = nullptr
             );
 
-            Ellipse(const Ellipse_CSPtr other, bool sameID = false);
+            Ellipse(const Ellipse_CSPtr& other, bool sameID = false);
+
+        private:
+            Ellipse(const lc::builder::EllipseBuilder& builder);
 
         public:
             /**
@@ -73,7 +81,7 @@ namespace lc {
              * @return CADEntity_CSPtr rotated entity
              */
             virtual CADEntity_CSPtr
-            rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
              * @brief scale, scales the entity
@@ -95,7 +103,7 @@ namespace lc {
             virtual const geo::Area boundingBox() const override;
 
             virtual CADEntity_CSPtr
-            modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
         public:
 

@@ -10,10 +10,6 @@ LinePatternBuilder::LinePatternBuilder() :
     _description() {
 }
 
-LinePatternBuilder::~LinePatternBuilder() {
-
-}
-
 const std::string& LinePatternBuilder::name() const {
     return _name;
 }
@@ -45,15 +41,15 @@ LinePatternBuilder* LinePatternBuilder::setPath(const std::vector<double>& path)
 }
 
 bool LinePatternBuilder::checkValues() {
-    return _name != "";
+    return !_name.empty();
 }
 
-DxfLinePatternByValue_CSPtr LinePatternBuilder::build() {
+meta::DxfLinePatternByValue_CSPtr LinePatternBuilder::build() {
     if(!checkValues()) {
-        throw "Missing values";
+        throw std::runtime_error("Missing values");
     }
 
-    return DxfLinePatternByValue_CSPtr(new DxfLinePatternByValue(*this));
+    return meta::DxfLinePatternByValue_CSPtr(new meta::DxfLinePatternByValue(*this));
 }
 
 LinePatternBuilder* LinePatternBuilder::addElement(double element) {

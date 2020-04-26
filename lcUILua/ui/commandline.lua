@@ -1,6 +1,6 @@
 local commands = {}
 local cliCommands = {}
-local lastPoint = Coordinate(0,0)
+local lastPoint = lc.geo.Coordinate(0,0)
 
 --Write a message to the command line log
 function message(message, id)
@@ -21,6 +21,18 @@ function add_command(name, callback)
     end
 end
 
+--Coomand line command On/OFF
+function cli_command_active(id, status)
+    if cliCommands[id] ~= nil then
+        cliCommands[id]:commandActive(status)
+    end
+end
+
+-- focus cli command
+function focusClicommand(id)
+    cliCommands[id]:setFocus()
+end
+
 --Configure command line to return raw text
 function cli_get_text(id, getText)
     if cliCommands[id] ~= nil then
@@ -30,7 +42,7 @@ end
 
 --Execute a command from command line
 function command(id, command)
-    commands[command:toStdString()](id)
+    commands[qt.QString.toStdString(command)](id)
 end
 
 --Store the point in memory when needed for relative coordinates
@@ -45,6 +57,11 @@ function add_commandline(mainWindow, id)
     cliCommands[id] = cliCommand
 
     luaInterface:luaConnect(cliCommand, "commandEntered(QString)", function(...) command(id, ...) end)
+
+    luaInterface:luaConnect(cliCommand, "finishOperation()", function()
+        luaInterface:triggerEvent('operationFinished', 0)
+        luaInterface:triggerEvent('finishOperation', 0)
+    end)
 
     luaInterface:luaConnect(cliCommand, "coordinateEntered(lc::geo::Coordinate)", function(coordinate)
         luaInterface:triggerEvent('point', {
@@ -71,7 +88,7 @@ function add_commandline(mainWindow, id)
 
     luaInterface:luaConnect(cliCommand, "textEntered(QString)", function(text)
         luaInterface:triggerEvent('text', {
-            text = text:toStdString(),
+            text = qt.QString.toStdString(text),
             widget = mainWindow:centralWidget()
         })
     end)
@@ -90,7 +107,7 @@ add_command("LINE", function(id) run_basic_operation(id, LineOperations) end)
 add_command("CIRCLE", function(id) run_basic_operation(id, CircleOperations) end)
 add_command("ARC", function(id) run_basic_operation(id, ArcOperations) end)
 add_command("ELLIPSE", function(id) run_basic_operation(id, EllipseOperations) end)
-add_command("ARCELLIPSE", function(id) run_basic_operation(id, EllipseOperations, true) end)
+add_command("ARCELLIPSE", function(id) run_basic_operation(id, EllipseOperations, "_init_arc") end)
 add_command("DIMALIGNED", function(id) run_basic_operation(id, DimAlignedOperations) end)
 add_command("DIMDIAMETRIC", function(id) run_basic_operation(id, DimDiametricOperations) end)
 add_command("DIMLINEAR", function(id) run_basic_operation(id, DimLinearOperations) end)

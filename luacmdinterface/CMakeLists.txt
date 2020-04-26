@@ -1,16 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 PROJECT (LuaCmdInterface)
-ADD_DEFINITIONS(-std=c++14)
-ADD_DEFINITIONS("-Wall")
 
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 message("***** Lua command line interface *****")
-
-# LOG4CXX
-find_package(Log4CXX REQUIRED)
-include_directories(${LOG4CXX_INCLUDE_DIRS})
-link_directories(${LOG4CXX_LIBRARY_DIRS})
 
 # Cairo
 find_package(Cairo REQUIRED)
@@ -35,12 +28,9 @@ else ()
 endif ()
 
 # Boost
-set(Boost_USE_MULTITHREADED ON)
-find_package(Boost COMPONENTS program_options filesystem system REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-
-message("Boost lib ${Boost_INCLUDE_DIRS}")
+find_package(Boost COMPONENTS program_options filesystem system log date_time thread log_setup REQUIRED)
 FIND_PACKAGE ( Threads REQUIRED )
+include_directories(${Boost_INCLUDE_DIRS})
 
 # GDK-Pixbuf
 find_package(GDK-Pixbuf REQUIRED)
@@ -49,6 +39,11 @@ include_directories(${GDK-PIXBUF_INCLUDE_DIRS})
 #GDK
 find_package(GDK REQUIRED)
 include_directories(${GDK_INCLUDE_DIRS})
+
+#GTK
+find_package(GTK REQUIRED)
+include_directories(${GTK_INCLUDE_DIRS})
+
 
 #GLib
 set(GLIB_FIND_COMPONENTS gobject)
@@ -67,12 +62,14 @@ if (SEPARATE_BUILD STREQUAL "ON")
     include_directories("${CMAKE_SOURCE_DIR}/../lcviewernoqt")
     include_directories("${CMAKE_SOURCE_DIR}/../lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/../lcadluascript")
+    include_directories("${CMAKE_SOURCE_DIR}/../third_party/kaguya/include")
 else()
     include_directories("${CMAKE_SOURCE_DIR}/lckernel")
     include_directories("${CMAKE_SOURCE_DIR}/third_party")
     include_directories("${CMAKE_SOURCE_DIR}/lcviewernoqt")
     include_directories("${CMAKE_SOURCE_DIR}/lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/lcadluascript")
+    include_directories("${CMAKE_SOURCE_DIR}/third_party/kaguya/include")
 endif()
 
 
@@ -89,8 +86,11 @@ target_link_libraries(luacmdinterface
         ${CAIRO_LIBRARIES} ${PANGO_LIBRARIES}
         ${Boost_LIBRARIES}
         ${CURL_LIBRARIES}
-        ${LOG4CXX_LIBRARIES} ${APR_LIBRARIES}
+        ${APR_LIBRARIES}
         ${GLIB_GOBJECT_LIBRARIES} ${GLIB_LIBRARIES}
         ${LUA_LIBRARIES}
-        lcluascript lckernel lcluascript lcviewernoqt
+        ${GDK-PIXBUF_LIBRARIES}
+        ${GTK_LIBRARIES}
+        lcluascript lckernel lcluascript lcviewernoqt ${Boost_LIBRARIES}
+
 )

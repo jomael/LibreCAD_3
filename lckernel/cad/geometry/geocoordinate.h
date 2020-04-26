@@ -141,7 +141,7 @@ namespace lc {
                 }
 
                 /**
-                  * Substract two points from each other and return a new coordinate : return _x - coord._x, _y - coord._y, _z - coord._z
+                  * Subtract two points from each other and return a new coordinate : return _x - coord._x, _y - coord._y, _z - coord._z
                   * returns Coordinate
                   */
                 inline Coordinate operator - (const Coordinate& coord) const {
@@ -195,7 +195,7 @@ namespace lc {
                 }
 
                 /**
-                  * Dot product with other coordindate : return _x * coord._x + _y * coord._y + _z * coord._z;
+                  * Dot product with other coordinate : return _x * coord._x + _y * coord._y + _z * coord._z;
                   *
                   * @param Coordinate
                   * @return double   Dot product value
@@ -335,8 +335,8 @@ namespace lc {
 
                 /**
                  * @brief mirror a coordinate
-                 * @param axis1 : First point of line to be mirroed about
-                 * @param axis2 : Second point of line to be mirroed about
+                 * @param axis1 : First point of line to be mirrored about
+                 * @param axis2 : Second point of line to be mirrored about
                  * @return mirrored coordinate
                  */
                 inline Coordinate mirror(const Coordinate& axis1, const Coordinate& axis2) const {

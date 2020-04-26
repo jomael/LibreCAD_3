@@ -1,7 +1,9 @@
 #include "luainterface.h"
 #include <QApplication>
-
-#include <log4cxx/xml/domconfigurator.h>
+#include <QtCore/QDebug>
+#include <QtWidgets/QStyleFactory>
+#include <QSettings>
+#include "cad/logger/logger.h"
 
 int main(int argc, char* argv[]) {
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
@@ -10,10 +12,10 @@ int main(int argc, char* argv[]) {
     
     QApplication a(argc, argv);
 
-    //log4cxx::xml::DOMConfigurator::configure("Log4cxxConfig.xml");
+    LOGGER;//Init logger
 
-    LuaInterface li;
+    lc::ui::LuaInterface li;
     li.initLua();
-    
-    return a.exec();
+
+    return QApplication::exec();
 }

@@ -1,10 +1,19 @@
-#include <cad/document/document.h>
+#include <cad/storage/document.h>
 #include "lclua.h"
 #include <utils/timer.h>
 #include <managers/luacustomentitymanager.h>
+#include <kaguya/kaguya.hpp>
+#include <bridge/lc.h>
+#include <bridge/lc_geo.h>
+#include <bridge/lc_meta.h>
+#include <bridge/lc_entity.h>
+#include <bridge/lc_builder.h>
+#include <bridge/lc_storage.h>
+#include <bridge/lc_maths.h>
+#include <bridge/lc_operation.h>
+#include <bridge/lc_event.h>
 
-using namespace lc;
-using namespace LuaIntf;
+using namespace lc::lua;
 
 static const luaL_Reg loadedlibs[] = {
         {"_G", luaopen_base},
@@ -13,61 +22,61 @@ static const luaL_Reg loadedlibs[] = {
         {LUA_TABLIBNAME, luaopen_table},
         {LUA_STRLIBNAME, luaopen_string},
         {LUA_MATHLIBNAME, luaopen_math},
-        {NULL, NULL}
+        {nullptr, nullptr}
 };
 
 LCLua::LCLua(lua_State* L) :
     _L(L),
     _f_openFileDialog(nullptr) {
 
-    LuaBinding(L)
-    .beginClass<LuaCustomEntityManager>("LuaCustomEntityManager")
-        .addStaticFunction("getInstance", &LuaCustomEntityManager::getInstance)
-        .addFunction("registerPlugin", &LuaCustomEntityManager::registerPlugin)
-    .endClass();
+    kaguya::State s(_L);
+    s["registerPlugin"].setFunction([](const std::string& name, kaguya::LuaRef onNewWaitingEntityFunction) {
+            LuaCustomEntityManager::getInstance().registerPlugin(name, onNewWaitingEntityFunction);
+    });
 }
 
 void LCLua::addLuaLibs() {
     const luaL_Reg *lib;
 
-    for (lib = loadedlibs; lib->func; lib++) {
+    for (lib = loadedlibs; lib->func != nullptr; lib++) {
         luaL_requiref(_L, lib->name, lib->func, 1);
         lua_pop(_L, 1);
     }
 
-    //Add others non-LC functions
-    LuaBinding(_L)
-        .addFunction("microtime", &lua_microtime)
-        .addFunction("openFile", &openFile)
+    //Add others non-LC tools
+    kaguya::State s(_L);
+    s["microtime"].setFunction(&lua_microtime);
+    s["openFile"].setFunction(&openFile);
 
-        .beginClass<FILE>("FILE")
-            .addFunction("read", [](FILE* file, const size_t len) {
-                return read(file, len);
-            })
-            .addFunction("write", [](FILE* file, const char* content) {
-                return write(file, content);
-            })
-        .endClass();
+    s["FILE"].setClass(kaguya::UserdataMetatable<FILE>()
+        .addStaticFunction("read", [](FILE* file, const size_t len) {
+            return read(file, len);
+        })
+        .addStaticFunction("write", [](FILE* file, const char* content) {
+            return write(file, content);
+        })
+    );
 
     if(_f_openFileDialog == nullptr) {
-        LuaBinding(_L).addFunction("openFileDialog", []() {
+        s["openFileDialog"].setFunction([]() {
             return (FILE*) nullptr;
         });
     }
     else {
-        LuaBinding(_L).addFunction("openFileDialog", _f_openFileDialog);
+        s["openFileDialog"].setFunction(_f_openFileDialog);
     }
 }
 
-void LCLua::setDocument(lc::Document_SPtr document) {
-    LuaIntf::Lua::setGlobal(_L, "document", document);
+void LCLua::setDocument(const lc::storage::Document_SPtr& document) {
+    kaguya::State state(_L);
+    state["document"] = document;
 }
 
 std::string LCLua::runString(const char* code) {
     std::string out;
 
     auto s = luaL_dostring(_L, code);
-    if (s != 0) {
+    if (s) {
         out.append(lua_tostring(_L, -1));
         lua_pop(_L, 1);
     }
@@ -81,13 +90,16 @@ FILE* LCLua::openFile(const char* path, const char* mode) {
     return fopen(path, mode);
 }
 
-std::string LCLua::read(FILE* file, const size_t len) {
-    char buf[len + 1];
+std::string LCLua::read(FILE* file, size_t len) {
+	char* buf = new char[len + 1];
 
     size_t n = fread(buf, sizeof(char), len, file);
     buf[n] = '\0';
 
-    return std::string(buf);
+    auto bufferStr = std::string(buf);
+	delete buf;
+
+	return bufferStr;
 }
 
 void LCLua::write(FILE* file, const char* content) {
@@ -96,4 +108,18 @@ void LCLua::write(FILE* file, const char* content) {
 
 void LCLua::setF_openFileDialog(FILE* (* f_openFileDialog)(bool, const char*, const char*)) {
     _f_openFileDialog = f_openFileDialog;
+}
+
+void LCLua::importLCKernel() {
+    kaguya::State state(_L);
+
+    import_lc_namespace(state);
+    import_lc_geo_namespace(state);
+    import_lc_meta_namespace(state);
+    import_lc_entity_namespace(state);
+    import_lc_builder_namespace(state);
+    import_lc_storage_namespace(state);
+    import_lc_maths_namespace(state);
+    import_lc_event_namespace(state);
+    import_lc_operation_namespace(state);
 }

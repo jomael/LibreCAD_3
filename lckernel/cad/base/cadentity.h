@@ -22,8 +22,7 @@ namespace lc {
         friend class lc::builder::CADEntityBuilder;
 
         public:
-            CADEntity() {
-            }
+            CADEntity() = default;
 
             /*!
              * \brief CADEntity Constructor
@@ -33,11 +32,11 @@ namespace lc {
              * \sa lc::LineWidth
              * \sa lc::MetaType
              */
-            CADEntity(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo = nullptr, const Block_CSPtr block = nullptr);
+            CADEntity(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo = nullptr, meta::Block_CSPtr block = nullptr);
 
-            CADEntity(CADEntity_CSPtr cadEntity, bool sameID);
+            CADEntity(const CADEntity_CSPtr& cadEntity, bool sameID);
 
-            CADEntity(CADEntity_CSPtr cadEntity);
+            CADEntity(const CADEntity_CSPtr& cadEntity);
 
             virtual ~CADEntity() = default;
 
@@ -64,7 +63,7 @@ namespace lc {
              * \return CADEntity std::shared_ptr
              */
             virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center,
-                                           const double rotation_angle) const = 0;
+                                           double rotation_angle) const = 0;
 
             /*!
              * \brief Function implementation for Scale.
@@ -95,14 +94,15 @@ namespace lc {
             * Return a new entity with the same ID bit with possible modified metainfo and/pr layer information
             * #return new entity with same ID
             */
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const = 0;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo,
+                                           meta::Block_CSPtr block) const = 0;
 
             /*!
              * \brief layer
              * return the layer this entity is placed on
              * \return Layer_CSPtr
              */
-            Layer_CSPtr layer() const;
+            meta::Layer_CSPtr layer() const;
 
             /**
             * Retrieve meta information back from this entity
@@ -110,7 +110,7 @@ namespace lc {
             * example: auto metaData = myEntity.metaInfo<lc::MetaColorByValue>(lc::MetaInfo::_COLOR);
             */
             template<typename T>
-            const std::shared_ptr<const T> metaInfo(std::string metaName) const {
+            const std::shared_ptr<const T> metaInfo(const std::string& metaName) const {
                 if (_metaInfo && (_metaInfo->find(metaName) != _metaInfo->end())) {
                     auto a=_metaInfo->at(metaName);
                     auto b=std::dynamic_pointer_cast<const T>(a);
@@ -120,11 +120,13 @@ namespace lc {
                 return nullptr;
             }
 
-            MetaInfo_CSPtr metaInfo() const {
+                meta::MetaInfo_CSPtr metaInfo() const {
                 return _metaInfo;
             }
 
-            virtual void accept(GeoEntityVisitor &v) const override { v.visit(*this); }
+            void accept(GeoEntityVisitor &v) const override {
+                v.visit(*this);
+            }
 
             virtual void dispatch(EntityDispatch &) const = 0;
 
@@ -132,15 +134,15 @@ namespace lc {
              * @brief Return the current entity block
              * @return Entity block or nullptr if not defined
              */
-            Block_CSPtr block() const;
+            meta::Block_CSPtr block() const;
 
         protected:
             CADEntity(const lc::builder::CADEntityBuilder& builder);
 
         private:
-            Layer_CSPtr _layer;
-            MetaInfo_CSPtr _metaInfo;
-            Block_CSPtr _block;
+            meta::Layer_CSPtr _layer;
+            meta::MetaInfo_CSPtr _metaInfo;
+            meta::Block_CSPtr _block;
         };
 
         DECLARE_SHORT_SHARED_PTR(CADEntity)

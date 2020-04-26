@@ -3,7 +3,7 @@
 using namespace lc;
 using namespace entity;
 
-Insert::Insert(Insert_CSPtr other, bool sameID) :
+Insert::Insert(const Insert_CSPtr& other, bool sameID) :
     CADEntity(other, sameID),
     _document(other->_document),
     _position(other->_position),
@@ -32,7 +32,7 @@ Insert::~Insert() {
     document()->removeEntityEvent().disconnect<Insert, &Insert::on_removeEntityEvent>(this);
 }
 
-const Block_CSPtr& Insert::displayBlock() const {
+const meta::Block_CSPtr& Insert::displayBlock() const {
     return _displayBlock;
 }
 
@@ -54,7 +54,7 @@ CADEntity_CSPtr Insert::copy(const geo::Coordinate& offset) const {
     return newEntity;
 }
 
-CADEntity_CSPtr Insert::rotate(const geo::Coordinate& rotation_center, const double rotation_angle) const {
+CADEntity_CSPtr Insert::rotate(const geo::Coordinate& rotation_center, double rotation_angle) const {
     //TODO
     return shared_from_this();
 }
@@ -73,13 +73,16 @@ const geo::Area Insert::boundingBox() const {
     return _boundingBox;
 }
 
-CADEntity_CSPtr Insert::modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const {
+CADEntity_CSPtr Insert::modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const {
     auto builder = builder::InsertBuilder();
 
-    builder.copy(shared_from_this());
-    builder.setLayer(layer);
-    builder.setMetaInfo(metaInfo);
-    builder.setBlock(block);
+    //TODO: a copy should be made, instead of setting every attribute manually
+    builder.setCoordinate(_position);
+    builder.setDisplayBlock(_displayBlock);
+    builder.setDocument(_document);
+    builder.setLayer(std::move(layer));
+    builder.setMetaInfo(std::move(metaInfo));
+    builder.setBlock(std::move(block));
 
     return builder.build();
 }
@@ -114,7 +117,7 @@ std::vector<lc::EntityCoordinate> entity::Insert::snapPoints(const geo::Coordina
                                                              int maxNumberOfSnapPoints) const {
     std::vector<EntityCoordinate> points;
 
-    if (simpleSnapConstrain.constrain() & SimpleSnapConstrain::LOGICAL) {
+    if ((bool) (simpleSnapConstrain.constrain() & SimpleSnapConstrain::LOGICAL)) {
         points.emplace_back(_position, 0);
     }
 
@@ -126,7 +129,7 @@ geo::Coordinate Insert::nearestPointOnPath(const geo::Coordinate& coord) const {
     return _position;
 }
 
-const Document_SPtr& Insert::document() const {
+const storage::Document_SPtr& Insert::document() const {
     return _document;
 }
 
@@ -150,13 +153,13 @@ void Insert::calculateBoundingBox() {
     }
 }
 
-void Insert::on_addEntityEvent(const lc::AddEntityEvent& event) {
+void Insert::on_addEntityEvent(const lc::event::AddEntityEvent& event) {
     if(event.entity()->block() == _displayBlock) {
         calculateBoundingBox();
     }
 }
 
-void Insert::on_removeEntityEvent(const lc::RemoveEntityEvent& event) {
+void Insert::on_removeEntityEvent(const lc::event::RemoveEntityEvent& event) {
     if(event.entity()->block() == _displayBlock) {
         calculateBoundingBox();
     }

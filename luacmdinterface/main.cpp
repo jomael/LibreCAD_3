@@ -1,14 +1,14 @@
 #include <lclua.h>
 
-#include <cad/dochelpers/documentimpl.h>
+#include <cad/storage/documentimpl.h>
 #include <fstream>
 
-#include <cad/dochelpers/storagemanagerimpl.h>
+#include <cad/storage/storagemanagerimpl.h>
 #include <cad/operations/entitybuilder.h>
 #include <documentcanvas.h>
 #include <painters/lccairopainter.tcc>
 #include <drawables/gradientbackground.h>
-#include <cad/dochelpers/undomanagerimpl.h>
+#include <cad/storage/undomanagerimpl.h>
 #include <curl/curl.h>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -18,26 +18,26 @@
 
 namespace po = boost::program_options;
 
-using LcPainter = LCViewer::LcPainter;
+using LcPainter = lc::viewer::LcPainter;
 
 static char const* const DEFAULT_OUT_FILENAME = "out.png";
 static const int DEFAULT_IMAGE_WIDTH = 400;
 static const int DEFAULT_IMAGE_HEIGHT = 400;
 
-static std::string readBuffer;
+static std::string* readBuffer;
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
-    readBuffer.append((char*) contents, realsize);
+    readBuffer->append((char*) contents, realsize);
     return realsize;
 }
 
-std::string loadFile(std::string url) {
+std::string loadFile(const std::string& url) {
     CURL* curl;
     CURLcode res;
 
     curl = curl_easy_init();
 
-    if (curl) {
+    if (curl != nullptr) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         /* example.com is redirected, so we tell libcurl to follow redirection */
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -55,17 +55,18 @@ std::string loadFile(std::string url) {
 
         /* always cleanup */
         curl_easy_cleanup(curl);
-        return readBuffer;
+        return *readBuffer;
     } else {
         return "";
     }
 }
 
-std::ofstream ofile;
-cairo_status_t write_func (void * closure, const unsigned char *data, unsigned int length) {
+std::ofstream* ofile;
+cairo_status_t write_func (void* closure, const unsigned char* data, unsigned int length) {
 
-    if (ofile.is_open())
-        ofile.write((const char *)data, length);
+    if (ofile->is_open()) {
+        ofile->write((const char*) data, length);
+    }
 
     return CAIRO_STATUS_SUCCESS;
 }
@@ -88,9 +89,10 @@ static FILE* openFileDialog(bool isOpening, const char* description, const char*
 int main(int argc, char** argv) {
     int width = DEFAULT_IMAGE_WIDTH;
     int height = DEFAULT_IMAGE_HEIGHT;
-    std::string fIn = "";
+    std::string fIn;
     std::string fOut = DEFAULT_OUT_FILENAME;
     std::string fType;
+    readBuffer = new std::string;
 
     // Read CMD options
     po::options_description desc("Allowed options");
@@ -114,57 +116,60 @@ int main(int argc, char** argv) {
         std::cerr << "Height must be > 0" << std::endl;
     }
 
-    if (vm.count("help")) {
+    if (vm.count("help") != 0u) {
         std::cout << desc << "\n";
         return 1;
     }
 
-    if (fIn.size() == 0) {
+    if (fIn.empty()) {
         std::cerr << "Input filename cannot be empty" << std::endl;
         std::cout << desc << "\n";
         return 1;
     }
 
     // Create Librecad document
-    auto _storageManager = std::make_shared<lc::StorageManagerImpl>();
-    auto _document = std::make_shared<lc::DocumentImpl>(_storageManager);
+    auto _storageManager = std::make_shared<lc::storage::StorageManagerImpl>();
+    auto _document = std::make_shared<lc::storage::DocumentImpl>(_storageManager);
     auto _canvas = std::make_shared<DocumentCanvas>(_document);
 
-    // Add backround
-    auto _gradientBackground = std::make_shared<GradientBackground>(lc::Color(0x90, 0x90, 0x90),
+    // Add background
+    auto _gradientBackground = std::make_shared<lc::viewer::drawable::GradientBackground>(lc::Color(0x90, 0x90, 0x90),
                                                                     lc::Color(0x00, 0x00, 0x00));
-    _canvas->background().connect<GradientBackground, &GradientBackground::draw>(_gradientBackground.get());
+    _canvas->background().connect<lc::viewer::drawable::GradientBackground, &lc::viewer::drawable::GradientBackground::draw>(_gradientBackground.get());
 
     /* try to guess from file extension the output type */
     if (fType.empty()) {
         fType = boost::filesystem::extension(fOut);
-        fType = fType.substr(fType.find_first_of(".") + 1);
+        fType = fType.substr(fType.find_first_of('.') + 1);
     }
 
     std::transform(fType.begin(), fType.end(), fType.begin(), ::tolower);
-    ofile.open(fOut);
+    ofile = new std::ofstream;
+    ofile->open(fOut);
 
     using namespace CairoPainter;
 
     LcPainter* lcPainter = nullptr;
-    if (fType == "pdf")
+    if (fType == "pdf") {
         lcPainter = new LcCairoPainter<backend::PDF>(width, height, &write_func);
-    else if (fType == "svg")
+    }
+    else if (fType == "svg") {
         lcPainter = new LcCairoPainter<backend::SVG>(width, height, &write_func);
-        // cairo can print any surface to PNG
-    else
+    }
+    else {
         lcPainter = new LcCairoPainter<backend::SVG>(width, height, nullptr);
+    }
 
     // Set device width/height
     _canvas->newDeviceSize(width, height);
 
     // Render Lua Code
-    auto luaState = LuaIntf::LuaState::newState();
+    kaguya::State luaState;
 
-    lc::PluginManager pluginManager(luaState, "cli");
+    lc::lua::PluginManager pluginManager(luaState.state(), "cli");
     pluginManager.loadPlugins();
 
-    auto lcLua = lc::LCLua(luaState);
+    auto lcLua = lc::lua::LCLua(luaState.state());
     lcLua.setF_openFileDialog(&openFileDialog);
     lcLua.addLuaLibs();
     lcLua.importLCKernel();
@@ -172,14 +177,15 @@ int main(int argc, char** argv) {
 
     std::string luaCode = loadFile(fIn);
 
-    if (luaCode.size() != 0) {
+    if (!luaCode.empty()) {
         std::string out = lcLua.runString(luaCode.c_str());
 
-        if (out.size() > 0) {
+        if (!out.empty()) {
             std::cerr << out << std::endl;
             return 2;
         }
-    } else {
+    }
+    else {
         std::cerr << "No lua code was loaded" << std::endl;
         return 1;
     }
@@ -189,12 +195,15 @@ int main(int argc, char** argv) {
     _canvas->render(*lcPainter, VIEWER_DOCUMENT);
     _canvas->render(*lcPainter, VIEWER_FOREGROUND);
 
-    if (fType == "png" || (fType != "pdf" && fType != "svg"))
-        static_cast<LcCairoPainter<CairoPainter::backend::Image>*>(lcPainter)->writePNG(fOut);
-    ofile.close();
+    if (fType == "png" || (fType != "pdf" && fType != "svg")) {
+        dynamic_cast<LcCairoPainter<CairoPainter::backend::Image>*>(lcPainter)->writePNG(fOut);
+    }
+    ofile->close();
 
-    lc::LuaCustomEntityManager::getInstance().removePlugins();
+    lc::lua::LuaCustomEntityManager::getInstance().removePlugins();
 
     delete lcPainter;
+    delete ofile;
+    delete readBuffer;
     return 0;
 }

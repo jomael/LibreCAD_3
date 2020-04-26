@@ -13,15 +13,11 @@ LayerBuilder::LayerBuilder() :
 
 }
 
-LayerBuilder::~LayerBuilder() {
-
-}
-
 const std::string& LayerBuilder::name() const {
     return _name;
 }
 
-const MetaLineWidthByValue& LayerBuilder::lineWidth() const {
+const meta::MetaLineWidthByValue& LayerBuilder::lineWidth() const {
     return _lineWidth;
 }
 
@@ -29,7 +25,7 @@ const Color& LayerBuilder::color() const {
     return _color;
 }
 
-DxfLinePatternByValue_CSPtr LayerBuilder::linePattern() const {
+meta::DxfLinePatternByValue_CSPtr LayerBuilder::linePattern() const {
     return _linePattern;
 }
 
@@ -43,7 +39,7 @@ LayerBuilder* LayerBuilder::setName(const std::string& name) {
     return this;
 }
 
-LayerBuilder* LayerBuilder::setLineWidth(const MetaLineWidthByValue& lineWidth) {
+LayerBuilder* LayerBuilder::setLineWidth(const meta::MetaLineWidthByValue& lineWidth) {
     _lineWidth = lineWidth;
 
     return this;
@@ -55,7 +51,7 @@ LayerBuilder* LayerBuilder::setColor(const Color& color) {
     return this;
 }
 
-LayerBuilder* LayerBuilder::setLinePattern(const DxfLinePatternByValue_CSPtr& linePattern) {
+LayerBuilder* LayerBuilder::setLinePattern(const meta::DxfLinePatternByValue_CSPtr& linePattern) {
     _linePattern = linePattern;
 
     return this;
@@ -67,14 +63,14 @@ LayerBuilder* LayerBuilder::setIsFrozen(bool isFrozen) {
     return this;
 }
 
-Layer_CSPtr LayerBuilder::build() {
+meta::Layer_CSPtr LayerBuilder::build() {
     if(!checkValues()) {
-        throw "Missing values";
+        throw std::runtime_error("Missing values");
     }
 
-    return Layer_CSPtr(new Layer(*this));
+    return meta::Layer_CSPtr(new meta::Layer(*this));
 }
 
 bool LayerBuilder::checkValues() {
-    return _name != "";
+    return !_name.empty();
 }

@@ -73,6 +73,9 @@ namespace lc {
 
         class Insert;
         DECLARE_SHORT_SHARED_PTR(Insert)
+
+        class Hatch;
+        DECLARE_SHORT_SHARED_PTR(Hatch)
     }
 }
 
@@ -165,7 +168,7 @@ namespace detail {
     template <typename IVisitor, typename C, typename T>
     struct IVisitorImpl<IVisitor, C, T> : IVisitor, C
     {
-        virtual void visit(const T& t) override { C::visit(t); }
+        virtual void visit(const T& t) override { C::visit(t); } // NOLINT
     };
 
 // helper to expand child type to IVisitorImpl
@@ -202,7 +205,7 @@ namespace detail {
                 // when given arg is concrete type, reinterpret_cast is required.
                 // TODO: build a smaller table with only possible value to avoid that
 //                return f(static_cast<typename std::tuple_element<Is, RetTuple>::type>(std::get<Is>(arg))...);
-                return f(reinterpret_cast<typename std::tuple_element<Is, RetTuple>::type>(std::get<Is>(arg))...);
+                return f(reinterpret_cast<typename std::tuple_element<Is, RetTuple>::type>(std::get<Is>(arg))...); // NOLINT
             }
         };
 
@@ -300,8 +303,8 @@ namespace lc {
 
     using GeoEntityVisitor = IVisitorTs<
             lc::Visitable,
-            geo::Vector, geo::Circle, geo::Arc, geo::Area, geo::Ellipse,
-            entity::CADEntity, entity::Point, entity::Line, entity::Arc, entity::Circle, entity::Ellipse,
+            geo::Vector, geo::Circle, geo::Arc, geo::Area, geo::Ellipse, geo::Spline,
+            entity::CADEntity, entity::Point, entity::Line, entity::Arc, entity::Circle, entity::Ellipse, entity::Spline,
             entity::LWPolyline, entity::Image
     >;
 

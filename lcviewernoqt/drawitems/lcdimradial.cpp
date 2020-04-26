@@ -2,11 +2,11 @@
 #include "../lcdrawoptions.h"
 #include "lcdimradial.h"
 #include "endcaps.h"
-#include <cad/functions/string_helper.h>
+#include <cad/tools/string_helper.h>
 
-using namespace LCViewer;
+using namespace lc::viewer;
 
-LCDimRadial::LCDimRadial(const lc::entity::DimRadial_CSPtr dimRadial) : 
+LCDimRadial::LCDimRadial(const lc::entity::DimRadial_CSPtr& dimRadial) :
         LCVDrawItem(dimRadial, true),
         _dimRadial(dimRadial) {
 }
@@ -19,14 +19,14 @@ LCDimRadial::LCDimRadial(const lc::entity::DimRadial_CSPtr dimRadial) :
 *
 */
 void LCDimRadial::draw(LcPainter& painter, const LcDrawOptions &options, const lc::geo::Area& rect) const {
-    // Decide to show the explecit value or the measured value
+    // Decide to show the explicit value or the measured value
     double radiusCircle = _dimRadial->definitionPoint().distanceTo(_dimRadial->definitionPoint2());
     const lc::geo::Coordinate& mousePos = _dimRadial->middleOfText();
     //const bool mouseIsInside = mousePos.distanceTo(_dimRadial->definitionPoint()) < radiusCircle;
     // FIXME this should not be fixed
     const double capSize = 2.;
     
-    std::string value = lc::StringHelper::dim_value(_dimRadial->explicitValue(), options.radialFormat(), radiusCircle);
+    std::string value = lc::tools::StringHelper::dim_value(_dimRadial->explicitValue(), options.radialFormat(), radiusCircle);
     
     /* get text size  */
     painter.save();

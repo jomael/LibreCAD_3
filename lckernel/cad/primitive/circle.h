@@ -14,8 +14,10 @@
 namespace lc {
     namespace entity {
 
-        class Circle
-                : public std::enable_shared_from_this<Circle>, public CADEntity, public geo::Circle, public Snapable {
+        class Circle : public std::enable_shared_from_this<Circle>,
+                       public CADEntity,
+                       public geo::Circle,
+                       public Snapable {
         friend class builder::CircleBuilder;
 
         public:
@@ -26,17 +28,19 @@ namespace lc {
              * @param Layer_CSPtr _layer
              * @param MetaTypes metaTypes
              */
-            Circle(const geo::Coordinate &center, double radius, const Layer_CSPtr layer,
-                   const MetaInfo_CSPtr metaInfo = nullptr, const Block_CSPtr block = nullptr);
+            Circle(const geo::Coordinate &center,
+                   double radius,
+                   meta::Layer_CSPtr layer,
+                   meta::MetaInfo_CSPtr metaInfo = nullptr,
+                   meta::Block_CSPtr block = nullptr);
 
-            Circle(const Circle_CSPtr other, bool sameID = false);
+            Circle(const Circle_CSPtr& other, bool sameID = false);
 
         public:
             virtual std::vector<EntityCoordinate> snapPoints(const geo::Coordinate &coord, const SimpleSnapConstrain & constrain, double minDistanceToSnap,
                                                              int maxNumberOfSnapPoints) const override;
 
             virtual geo::Coordinate nearestPointOnPath(const geo::Coordinate &coord) const override;
-
         public:
 
             /**
@@ -59,7 +63,7 @@ namespace lc {
              * @param double rotation_angle
              * @return CADEntity_CSPtr rotated entity
              */
-            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, const double rotation_angle) const override;
+            virtual CADEntity_CSPtr rotate(const geo::Coordinate &rotation_center, double rotation_angle) const override;
 
             /**
              * @brief scale, scales the entity
@@ -79,7 +83,7 @@ namespace lc {
              */
             virtual const geo::Area boundingBox() const override;
 
-            virtual CADEntity_CSPtr modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const override;
+            virtual CADEntity_CSPtr modify(meta::Layer_CSPtr layer, meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const override;
 
         public:
             virtual void accept(GeoEntityVisitor &v) const override { v.visit(*this); }
@@ -90,7 +94,6 @@ namespace lc {
 
         private:
             Circle(const builder::CircleBuilder& builder);
-
         };
 
         DECLARE_SHORT_SHARED_PTR(Circle)

@@ -30,6 +30,9 @@ namespace lc {
                 return *this;
             }
 
+            double absDiff2(const Color& other){
+                return ((_r-other._r)*(_r-other._r)+(_g-other._g)*(_g-other._g)+(_b-other._b)*(_b-other._b)+(_a-other._a)*(_a-other._a));
+            }
 
             bool operator==(lc::Color b) {
                 return _r == b._r && _b == b._b && _g == b._g && _a == b._a;
@@ -52,20 +55,20 @@ namespace lc {
             }
 
             inline unsigned char redI() const {
-                return std::round(_r * 255);
+                return (unsigned char) std::round(_r * 255);
             }
             inline unsigned char greenI() const {
-                return std::round(_g * 255);
+                return (unsigned char) std::round(_g * 255);
             }
             inline unsigned char blueI() const {
-                return std::round(_b * 255);
+                return (unsigned char) std::round(_b * 255);
             }
             inline unsigned char alphaI() const {
-                return std::round(_a * 255);
+                return (unsigned char) std::round(_a * 255);
             }
 
             friend std::ostream& operator<<(std::ostream& os, const Color& color) {
-                os << "Color(red=" << color._r << " green=" << color._g << " blue=" << color._b << " ahlpa=" << color._a << ")";
+                os << "Color(red=" << color._r << " green=" << color._g << " blue=" << color._b << " alpha=" << color._a << ")";
                 return os;
             }
 

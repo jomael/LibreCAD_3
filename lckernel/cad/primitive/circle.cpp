@@ -6,26 +6,30 @@
 using namespace lc;
 using namespace entity;
 
-Circle::Circle(const geo::Coordinate &center, double radius, const Layer_CSPtr layer,
-               const MetaInfo_CSPtr metaInfo, const Block_CSPtr block)
-        : CADEntity(layer, metaInfo, block), geo::Circle(center, radius) {
+Circle::Circle(const geo::Coordinate &center,
+               double radius,
+               meta::Layer_CSPtr layer,
+               meta::MetaInfo_CSPtr metaInfo,
+               meta::Block_CSPtr block) :
+        CADEntity(std::move(layer), std::move(metaInfo), std::move(block)),
+        geo::Circle(center, radius){
 }
 
 
-Circle::Circle(const Circle_CSPtr other, bool sameID) : CADEntity(other, sameID),
+Circle::Circle(const Circle_CSPtr& other, bool sameID) : CADEntity(other, sameID),
                                                         geo::Circle(other->center(), other->radius()) {
 }
 
 Circle::Circle(const builder::CircleBuilder& builder) :
     CADEntity(builder),
-    geo::Circle(builder.center(), builder.radius()) {
+    geo::Circle(builder.center(), builder.radius()){
 }
 
 std::vector<EntityCoordinate> Circle::snapPoints(const geo::Coordinate &coord, const SimpleSnapConstrain &constrain,
                                                  double minDistanceToSnap, int maxNumberOfSnapPoints) const {
 
     std::vector<EntityCoordinate> points;
-    if (constrain.constrain() & SimpleSnapConstrain::LOGICAL) {
+    if ((bool) (constrain.constrain() & SimpleSnapConstrain::LOGICAL)) {
         // Add center
         lc::geo::Coordinate coord = center();
         points.emplace_back(coord, 0);
@@ -44,8 +48,8 @@ std::vector<EntityCoordinate> Circle::snapPoints(const geo::Coordinate &coord, c
         points.emplace_back(coord, 4);
     }
 
-    if (constrain.constrain() & SimpleSnapConstrain::ON_ENTITY ||
-        constrain.constrain() & SimpleSnapConstrain::ON_ENTITYPATH) {
+    if ((bool) (constrain.constrain() & SimpleSnapConstrain::ON_ENTITY) ||
+        (bool) (constrain.constrain() & SimpleSnapConstrain::ON_ENTITYPATH)) {
         geo::Coordinate npoe = nearestPointOnPath(coord);
         points.emplace_back(npoe, -1);
     }
@@ -98,10 +102,9 @@ const geo::Area Circle::boundingBox() const {
                      geo::Coordinate(center().x() + radius(), center().y() + radius()));
 }
 
-CADEntity_CSPtr Circle::modify(Layer_CSPtr layer, const MetaInfo_CSPtr metaInfo, Block_CSPtr block) const {
+CADEntity_CSPtr Circle::modify(meta::Layer_CSPtr layer, const meta::MetaInfo_CSPtr metaInfo, meta::Block_CSPtr block) const {
     auto newEntity = std::make_shared<Circle>(this->center(), this->radius(), layer, metaInfo, block);
     newEntity->setID(this->id());
     return newEntity;
 }
-
 

@@ -1,18 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 PROJECT (UnitTest)
-ADD_DEFINITIONS(-std=c++14)
-ADD_DEFINITIONS("-Wall")
 
 message("***** LibreCAD unit tests *****")
 
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-#LOG4CXX
-find_package(Log4CXX REQUIRED)
-include_directories(${LOG4CXX_INCLUDE_DIRS})
-link_directories(${LOG4CXX_LIBRARY_DIRS})
 
 # Eigen 3
 find_package(Eigen3 REQUIRED)
@@ -30,6 +23,23 @@ FIND_PACKAGE ( Threads REQUIRED )
 
 link_directories(${PROJECT_SOURCE_DIR}/../third_party/gtest_build) # Used by Travis CI
 
+# Boost logging
+find_package(Boost REQUIRED COMPONENTS log)
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+
+# Coverage
+if(WITH_COVERAGE)
+	include(CodeCoverage)
+	append_coverage_compiler_flags()
+	setup_target_for_coverage_lcov(
+            NAME lccoverage
+            EXECUTABLE lcunittest
+	    BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/"
+	    EXCLUDE "/usr/include/*" "/usr/lib/*" "../unittest/*" "../third_party/*"
+        )
+endif(WITH_COVERAGE)
+
 set(src
 main.cpp
 lckernel/primitive/entitytest.cpp
@@ -44,15 +54,23 @@ lckernel/math/testmatrices.cpp
 lckernel/geometry/beziertest.cpp
 lcviewernoqt/testselection.cpp
 lckernel/meta/customentitystorage.cpp
+lckernel/meta/icolor.cpp
 lckernel/operations/blocksopstest.cpp
 lckernel/operations/buildertest.cpp
+lckernel/operations/layerops.cpp
 lckernel/dochelpers/documentlist.cpp
+lckernel/geometry/testgeoellipse.cpp 
+lckernel/primitive/testellipse.cpp 
+lckernel/geometry/comparecoordinate.cpp 
+lckernel/operations/layerops.cpp
 )
 
 set(hdrs
 lckernel/primitive/entitytest.h
 lckernel/math/code.h
+lckernel/geometry/comparecoordinate.h
 )
+
 if(WITH_QT_UI)
     find_package(Qt5Widgets)
     find_package(Qt5Core)
@@ -99,6 +117,8 @@ if(WITH_QT_UI)
 endif(WITH_QT_UI)
 
 if(WITH_RENDERING_UNITTESTS)
+    add_compile_definitions(SOURCE_DIR=\"${CMAKE_CURRENT_LIST_DIR}\")
+
     # GDK-Pixbuf
     find_package(GDK-Pixbuf 2.30 REQUIRED)
     include_directories(${GDK-PIXBUF_INCLUDE_DIRS})
@@ -108,12 +128,9 @@ if(WITH_RENDERING_UNITTESTS)
     include_directories(${GDK_INCLUDE_DIRS})
 
     #GLib
-    find_package(GLib)
-    include_directories(${GLib_INCLUDE_DIRS})
-
-    #GObject
-    find_package(GObject)
-    include_directories(${GOBJECT_INCLUDE_DIR})
+    set(GLIB_FIND_COMPONENTS gobject)
+    find_package(GLib REQUIRED)
+    include_directories(${GLIB_INCLUDE_DIRS})
 
     # Cairo
     find_package(Cairo 1.13 REQUIRED)
@@ -126,7 +143,7 @@ if(WITH_RENDERING_UNITTESTS)
 
     # Boost
     set(Boost_USE_MULTITHREADED ON)
-    find_package(Boost COMPONENTS program_options filesystem system REQUIRED)
+    find_package(Boost COMPONENTS program_options filesystem system log REQUIRED)
     include_directories(${Boost_INCLUDE_DIRS})
 
     set(EXTRA_LIBS
@@ -135,21 +152,22 @@ if(WITH_RENDERING_UNITTESTS)
         ${PANGO_LIBRARIES}
         ${GDK-PIXBUF_LIBRARIES}
         ${GDK_LIBRARIES}
-        ${GLib_LIBRARY}
-        ${GOBJECT_LIBRARIES}
+        ${GLIB_GOBJECT_LIBRARIES}
+	${GLIB_LIBRARIES}
         ${Boost_LIBRARIES}
     )
 
     set(src
         ${src}
         rendering/renderingtest.cpp
-            lckernel/geometry/testgeoellipse.cpp lckernel/primitive/testellipse.cpp lckernel/geometry/comparecoordinate.cpp lckernel/geometry/comparecoordinate.h)
+    )
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}/lckernel")
 include_directories("${CMAKE_SOURCE_DIR}/lcadluascript")
 include_directories("${CMAKE_SOURCE_DIR}/lcviewernoqt")
-include_directories("${CMAKE_SOURCE_DIR}/lcDXFDWG")
+include_directories("${CMAKE_SOURCE_DIR}/persistence")
 include_directories("${CMAKE_SOURCE_DIR}/third_party")
+include_directories("${CMAKE_SOURCE_DIR}/third_party/kaguya/include")
 add_executable(lcunittest ${src} ${hdrs})
-target_link_libraries(lcunittest lckernel lcviewernoqt gtest ${EXTRA_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${LOG4CXX_LIBRARIES})
+target_link_libraries(lcunittest lckernel lcviewernoqt gtest ${EXTRA_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})

@@ -1,13 +1,15 @@
 #include <cad/interface/unmanageddraggable.h>
 #include "dragmanager.h"
 
-using namespace LCViewer;
+using namespace lc;
+using namespace lc::viewer;
+using namespace lc::viewer::manager;
 
-DragManager::DragManager(DocumentCanvas_SPtr docCanvas, std::shared_ptr<Cursor> cursor, TempEntities_SPtr tempEntities, unsigned int size) :
+DragManager::DragManager(DocumentCanvas_SPtr docCanvas, std::shared_ptr<drawable::Cursor> cursor, drawable::TempEntities_SPtr tempEntities, unsigned int size) :
 	_size(size),
-	_docCanvas(docCanvas),
-	_cursor(cursor),
-	_tempEntities(tempEntities),
+	_docCanvas(std::move(docCanvas)),
+	_cursor(std::move(cursor)),
+	_tempEntities(std::move(tempEntities)),
 	_entityDragged(false)
 {}
 
@@ -15,19 +17,22 @@ DragManager::DragManager(DocumentCanvas_SPtr docCanvas, std::shared_ptr<Cursor> 
 std::vector<lc::geo::Coordinate> DragManager::closeEntitiesDragPoints() {
 	std::vector<lc::geo::Coordinate> dragPoints;
 
-	auto entities = _docCanvas->selection();
-	if(entities.asVector().size() == 0) {
-		entities = _docCanvas->entityContainer().entitiesWithinAndCrossingAreaFast(_toleranceArea);
+    auto entities = _docCanvas->selectedDrawables();
+    if(entities.empty()) {
+        auto entitiesInSelection = _docCanvas->entityContainer().entitiesWithinAndCrossingAreaFast(_toleranceArea);
+        entitiesInSelection.each< const lc::entity::CADEntity >([&](lc::entity::CADEntity_CSPtr entity) {
+            entities.push_back(_docCanvas->getDrawable(entity));
+        });
 	}
 
-	entities.each<const LCVDrawItem>([&](LCVDrawItem_CSPtr drawable) {
+    for(const auto& drawable: entities) {
         if(!drawable) {
-            return;
+            continue;
         }
 
-        auto draggable = std::dynamic_pointer_cast<const lc::Draggable>(drawable->entity());
+        auto draggable = std::dynamic_pointer_cast<const lc::entity::Draggable>(drawable->entity());
         if(!draggable) {
-            return;
+            continue;
         }
 
         auto entityDragPoints = draggable->dragPoints();
@@ -35,7 +40,7 @@ std::vector<lc::geo::Coordinate> DragManager::closeEntitiesDragPoints() {
         for(auto dragPoint : entityDragPoints) {
             dragPoints.push_back(dragPoint.second);
         }
-	});
+    };
 
 	return dragPoints;
 }
@@ -49,7 +54,7 @@ std::vector<lc::geo::Coordinate> DragManager::selectedEntitiesDragPoints() {
             return;
         }
 
-        auto draggable = std::dynamic_pointer_cast<const lc::Draggable>(drawable);
+        auto draggable = std::dynamic_pointer_cast<const lc::entity::Draggable>(drawable);
         if(!draggable) {
             return;
         }
@@ -67,10 +72,10 @@ std::vector<lc::geo::Coordinate> DragManager::selectedEntitiesDragPoints() {
 void DragManager::moveEntities() {
 	auto entities = _selectedEntities.asVector();
 
-	for (auto entity : entities) {
-		auto draggable = std::dynamic_pointer_cast<const lc::Draggable>(entity);
+	for (const auto& entity : entities) {
+		auto draggable = std::dynamic_pointer_cast<const lc::entity::Draggable>(entity);
 
-		auto unmanaged = std::dynamic_pointer_cast<const lc::UnmanagedDraggable>(entity);
+		auto unmanaged = std::dynamic_pointer_cast<const lc::entity::UnmanagedDraggable>(entity);
         if(unmanaged) {
             unmanaged->setDragPoint(_cursor->position());
             continue;
@@ -121,7 +126,7 @@ void DragManager::onMouseMove() {
 		dragPoints = selectedEntitiesDragPoints();
 	}
 
-	_dragPointsEvent(DragPointsEvent(dragPoints, _size));
+	_dragPointsEvent(lc::viewer::event::DragPointsEvent(dragPoints, _size));
 }
 
 void DragManager::onMousePress() {
@@ -129,20 +134,16 @@ void DragManager::onMousePress() {
 	_entityBuilder = std::make_shared<lc::operation::EntityBuilder>(_docCanvas->document());
 	_builder->append(_entityBuilder);
 
-	auto entities = _docCanvas->selection();
-	if(entities.asVector().size() == 0) {
-		entities = _docCanvas->entityContainer().entitiesWithinAndCrossingAreaFast(_toleranceArea);
-	}
+    std::vector<lc::viewer::LCVDrawItem_SPtr> selectedDrawables = _docCanvas->selectedDrawables();
+    if(selectedDrawables.empty()) {
+        auto entitiesInSelection = _docCanvas->entityContainer().entitiesWithinAndCrossingAreaFast(_toleranceArea);
+        entitiesInSelection.each< const lc::entity::CADEntity >([&](lc::entity::CADEntity_CSPtr entity) {
+            selectedDrawables.push_back(_docCanvas->getDrawable(entity));
+        });
+    }
 
-	auto entitiesNearCursor = entities.asVector();
-
-	for(auto entity : entitiesNearCursor) {
-		auto drawable = std::dynamic_pointer_cast<const LCVDrawItem>(entity);
-		if(!drawable) {
-            continue;
-		}
-
-		auto draggable = std::dynamic_pointer_cast<const lc::Draggable>(drawable->entity());
+    for(const auto& drawable : selectedDrawables) {
+		auto draggable = std::dynamic_pointer_cast<const lc::entity::Draggable>(drawable->entity());
 		if(draggable) {
 			auto entityDragPoints = draggable->dragPoints();
 
@@ -151,12 +152,12 @@ void DragManager::onMousePress() {
 					_selectedEntities.insert(drawable->entity());
 					_selectedPoint = point.second;
 
-					auto unmanagedDraggable = std::dynamic_pointer_cast<const lc::UnmanagedDraggable>(draggable);
+					auto unmanagedDraggable = std::dynamic_pointer_cast<const lc::entity::UnmanagedDraggable>(draggable);
 					if(unmanagedDraggable) {
 						unmanagedDraggable->onDragPointClick(_builder, point.first);
 					}
 					else {
-						_entityBuilder->appendEntity(drawable->entity());
+                        _entityBuilder->appendEntity(drawable->entity());
 					}
 
 					break;
@@ -165,7 +166,7 @@ void DragManager::onMousePress() {
 		}
 	}
 
-	_entityDragged = _selectedEntities.asVector().size() != 0;
+	_entityDragged = !_selectedEntities.asVector().empty();
 
 	_entityBuilder->appendOperation(std::make_shared<lc::operation::Push>());
 	_entityBuilder->appendOperation(std::make_shared<lc::operation::Remove>());
@@ -178,8 +179,8 @@ void DragManager::onMouseRelease() {
 		_builder->undo(); //Re-insert original entities which are already deleted
 
 		auto entities = _selectedEntities.asVector();
-		for(auto entity : entities) {
-			auto unmanagedDraggable = std::dynamic_pointer_cast<const lc::UnmanagedDraggable>(entity);
+		for(const auto& entity : entities) {
+			auto unmanagedDraggable = std::dynamic_pointer_cast<const lc::entity::UnmanagedDraggable>(entity);
 			if(unmanagedDraggable) {
 				unmanagedDraggable->onDragPointRelease(_builder);
 			}
@@ -201,6 +202,6 @@ bool DragManager::entityDragged() {
 }
 
 
-Nano::Signal<void(const DragPointsEvent&)>& DragManager::dragPointsEvent() {
+Nano::Signal<void(const lc::viewer::event::DragPointsEvent&)>& DragManager::dragPointsEvent() {
 	return _dragPointsEvent;
 }

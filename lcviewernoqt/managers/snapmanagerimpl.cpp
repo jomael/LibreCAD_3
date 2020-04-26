@@ -3,13 +3,20 @@
 #include <cad/primitive/circle.h>
 #include <cad/base/visitor.h>
 #include <cad/base/cadentity.h>
-#include <cad/functions/intersect.h>
+#include <cad/math/intersect.h>
 
-using namespace LCViewer;
+using namespace lc;
+using namespace lc::viewer;
+using namespace lc::viewer::manager;
 
-SnapManagerImpl::SnapManagerImpl(DocumentCanvas_SPtr view, lc::Snapable_CSPtr grid, double distanceToSnap) : _grid(
-        grid), _gridSnappable(false), _snapIntersections(false), _distanceToSnap(distanceToSnap), _view(view) {
-
+SnapManagerImpl::SnapManagerImpl(DocumentCanvas_SPtr view, lc::entity::Snapable_CSPtr grid, double distanceToSnap) :
+        _grid(std::move(grid)),
+        _gridSnappable(false),
+        _snapIntersections(false),
+        _distanceToSnap(distanceToSnap),
+        _view(std::move(view)),
+        _snapConstrain(SimpleSnapConstrain(lc::SimpleSnapConstrain::NONE, 0, 0.))
+        {
 
 }
 
@@ -46,7 +53,7 @@ void SnapManagerImpl::setDeviceLocation(int x, int y) {
     // person can 'pick' a entity onceand then it would stay in the list of entities to
     // consider for snapping. THis will mostly lickly be lines only
     std::vector<lc::EntityDistance> entities = _view->entityContainer().getEntityPathsNearCoordinate(location,
-                                                                                                  realDistanceForPixels);
+                                                                                                  realDistanceForPixels, _snapConstrain);
     std::sort(entities.begin(), entities.end(), lc::EntityDistanceSorter(location));
 
     // Emit Snappoint event if a entity intersects with a other entity
@@ -57,16 +64,16 @@ void SnapManagerImpl::setDeviceLocation(int x, int y) {
                 lc::entity::CADEntity_CSPtr i1 = entities.at(a).entity();
                 lc::entity::CADEntity_CSPtr i2 = entities.at(b).entity();
 
-                lc::Intersect intersect(lc::Intersect::OnEntity, LCTOLERANCE);
+                lc::maths::Intersect intersect(lc::maths::Intersect::OnEntity, LCTOLERANCE);
                 visitorDispatcher<bool, lc::GeoEntityVisitor>(intersect, *i1.get(), *i2.get());
 
-                if (intersect.result().size() > 0) {
+                if (!intersect.result().empty()) {
                     std::vector<lc::geo::Coordinate> coords = intersect.result();
                     std::sort(coords.begin(), coords.end(), lc::geo::CoordinateDistanceSort(location));
 
                     lc::geo::Coordinate sp = coords.at(0);
                     if ((location - sp).magnitude() < realDistanceForPixels) {
-                        auto event = SnapPointEvent(sp);
+                        auto event = event::SnapPointEvent(sp);
                         _snapPointEvent(event);
                         return;
                     }
@@ -76,17 +83,17 @@ void SnapManagerImpl::setDeviceLocation(int x, int y) {
     }
 
     // Emit snappoint based on closest entity
-    if (entities.size() > 0) {
+    if (!entities.empty()) {
         // GO over all entities, first closest to the cursor gradually moving away
         for (auto &entity : entities) {
-            lc::Snapable_CSPtr captr;
+            lc::entity::Snapable_CSPtr captr;
 
             auto drawable = std::dynamic_pointer_cast<const LCVDrawItem>(entity.entity());
             if(drawable) {
-                captr = std::dynamic_pointer_cast<const lc::Snapable>(drawable->entity());
+                captr = std::dynamic_pointer_cast<const lc::entity::Snapable>(drawable->entity());
             }
             else {
-                captr = std::dynamic_pointer_cast<const lc::Snapable>(entity.entity());
+                captr = std::dynamic_pointer_cast<const lc::entity::Snapable>(entity.entity());
             }
 
             if (captr) {
@@ -94,10 +101,10 @@ void SnapManagerImpl::setDeviceLocation(int x, int y) {
                 std::vector<lc::EntityCoordinate> sp = captr->snapPoints(location, _snapConstrain,
                                                                          realDistanceForPixels, 10);
                 // When a snappoint was found, emit it
-                if (sp.size() > 0) {
-                    SnapPointEvent snapEvent(sp.at(0).coordinate());
+                if (!sp.empty()) {
+                    event::SnapPointEvent snapEvent(sp.at(0).coordinate());
                     _lastSnapEvent = snapEvent;
-                    auto event = SnapPointEvent(sp.at(0).coordinate());
+                    auto event = event::SnapPointEvent(sp.at(0).coordinate());
                     _snapPointEvent(event);
                     return;
                 }
@@ -106,18 +113,18 @@ void SnapManagerImpl::setDeviceLocation(int x, int y) {
     }
 
     // If no entity was found to snap against, then snap to grid
-    if (_gridSnappable == true) {
+    if (_gridSnappable) {
         std::vector<lc::EntityCoordinate> points = _grid->snapPoints(location, _snapConstrain, realDistanceForPixels,
                                                                      1);
-        if (points.size() > 0) {
-            auto event = SnapPointEvent(points.at(0).coordinate());
+        if (!points.empty()) {
+            auto event = event::SnapPointEvent(points.at(0).coordinate());
             _snapPointEvent(event);
             return;
         }
     }
 
 	//If no snap points found show cursor at mouse pos
-	_snapPointEvent(SnapPointEvent(location));
+	_snapPointEvent(event::SnapPointEvent(location));
 
     // FIXME: Currently sending a snapEvent so the cursor gets updated, what we really want is some sort of a release snap event
     // but only when we had a snap, but just lost it
@@ -136,16 +143,31 @@ bool SnapManagerImpl::isGridSnappable() const {
     return _gridSnappable;
 }
 
-void SnapManagerImpl::snapIntersections(bool enabled) {
+void SnapManagerImpl::setIntersectionsSnappable(bool enabled) {
     _snapIntersections = enabled;
 }
 
-bool SnapManagerImpl::snapIntersections() const {
+bool SnapManagerImpl::isIntersectionsSnappable() const {
     return _snapIntersections;
 }
 
+void SnapManagerImpl::setMiddleSnappable(bool enabled){
+	if(enabled){
+		_snapConstrain = _snapConstrain.enableConstrain(lc::SimpleSnapConstrain::LOGICAL);
+	}else{
+		_snapConstrain = _snapConstrain.disableConstrain(lc::SimpleSnapConstrain::LOGICAL);
+	}
+}
 
-Nano::Signal<void(const SnapPointEvent &)> &SnapManagerImpl::snapPointEvents() {
+void SnapManagerImpl::setEntitySnappable(bool enabled){
+	if(enabled){
+		_snapConstrain = _snapConstrain.enableConstrain(lc::SimpleSnapConstrain::ON_ENTITY);
+	}else{
+		_snapConstrain = _snapConstrain.disableConstrain(lc::SimpleSnapConstrain::ON_ENTITY);
+	}
+}
+
+Nano::Signal<void(const lc::viewer::event::SnapPointEvent &)> &SnapManagerImpl::snapPointEvents() {
     return _snapPointEvent;
 }
 

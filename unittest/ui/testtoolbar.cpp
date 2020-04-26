@@ -4,9 +4,9 @@
 
 #include <widgets/toolbar.h>
 #include <widgets/toolbartab.h>
+#include "uitests.h"
 
-static int argc = 0;
-static char** argv = NULL;
+using namespace lc::ui::widgets;
 
 TEST(ToolbarTest, TabOperations) {
 	QApplication app(argc, argv);

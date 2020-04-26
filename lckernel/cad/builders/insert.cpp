@@ -8,31 +8,29 @@ InsertBuilder::InsertBuilder() :
         _displayBlock(nullptr) {
 }
 
-InsertBuilder::~InsertBuilder() {
+bool InsertBuilder::checkValues(bool throwExceptions) const{
+    if (!throwExceptions) {
+        return CADEntityBuilder::checkValues(throwExceptions) &&
+            _displayBlock != nullptr &&
+            _document != nullptr;
+    }
+    else {
+        if (_displayBlock == nullptr) {
+            throw std::runtime_error("Display block cannot be NULL");
+        }
+        if (_document == nullptr) {
+            throw std::runtime_error("Document cannot be NULL");
+        }
 
+        return CADEntityBuilder::checkValues(throwExceptions);
+    }
 }
 
-InsertBuilder* InsertBuilder::copy(entity::Insert_CSPtr insert) {
-    CADEntityBuilder::copy(insert);
-
-    _displayBlock = insert->_displayBlock;
-    _document = insert->_document;
-    _coordinate = insert->_position;
-
-    return this;
-}
-
-bool InsertBuilder::checkValues() {
-    return CADEntityBuilder::checkValues() &&
-           _displayBlock != nullptr &&
-           _document != nullptr;
-}
-
-const Block_CSPtr& InsertBuilder::displayBlock() const {
+const meta::Block_CSPtr& InsertBuilder::displayBlock() const {
     return _displayBlock;
 }
 
-InsertBuilder* InsertBuilder::setDisplayBlock(const Block_CSPtr& displayBlock) {
+InsertBuilder* InsertBuilder::setDisplayBlock(const meta::Block_CSPtr& displayBlock) {
     _displayBlock = displayBlock;
 
     return this;
@@ -40,7 +38,7 @@ InsertBuilder* InsertBuilder::setDisplayBlock(const Block_CSPtr& displayBlock) {
 
 entity::Insert_CSPtr InsertBuilder::build() {
     if(!checkValues()) {
-        throw "Missing values";
+        throw std::runtime_error("Missing values");
     }
 
     return entity::Insert_CSPtr(new entity::Insert(*this));
@@ -56,11 +54,11 @@ InsertBuilder* InsertBuilder::setCoordinate(const geo::Coordinate& coordinate) {
     return this;
 }
 
-const Document_SPtr& InsertBuilder::document() const {
+const storage::Document_SPtr& InsertBuilder::document() const {
     return _document;
 }
 
-InsertBuilder* InsertBuilder::setDocument(const Document_SPtr& document) {
+InsertBuilder* InsertBuilder::setDocument(const storage::Document_SPtr& document) {
     _document = document;
 
     return this;

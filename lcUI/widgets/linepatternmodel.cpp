@@ -1,26 +1,28 @@
 #include "linepatternmodel.h"
 
+using namespace lc::ui::widgets;
+
 LinePatternModel::LinePatternModel(QObject *parent) :
     QAbstractTableModel(parent) {
 }
 
-void LinePatternModel::setLinePatterns(std::vector<lc::DxfLinePatternByValue_CSPtr> linePatterns) {
+void LinePatternModel::setLinePatterns(std::vector<lc::meta::DxfLinePatternByValue_CSPtr> linePatterns) {
     beginResetModel();
 
-    _linePatterns = linePatterns;
+    _linePatterns = std::move(linePatterns);
 
     endResetModel();
 }
 
-lc::DxfLinePattern_CSPtr LinePatternModel::linePatternAt(const int index) const {
+lc::meta::DxfLinePattern_CSPtr LinePatternModel::linePatternAt(unsigned long index) const {
     return _linePatterns.at(index);
 }
 
-int LinePatternModel::rowCount(const QModelIndex&) const {
-    return _linePatterns.size();
+int LinePatternModel::rowCount(const QModelIndex& parent) const {
+    return (int) _linePatterns.size();
 }
 
-int LinePatternModel::columnCount(const QModelIndex&) const {
+int LinePatternModel::columnCount(const QModelIndex& parent) const {
     return LAST;
 }
 
@@ -34,7 +36,7 @@ QVariant LinePatternModel::data(const QModelIndex &index, int role) const {
     if(role == Qt::DecorationRole && index.column() == PREVIEW) {
         QPixmap pixmap(PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
-        auto linePatternByValue = std::dynamic_pointer_cast<const lc::DxfLinePatternByValue>(linePattern);
+        auto linePatternByValue = std::dynamic_pointer_cast<const lc::meta::DxfLinePatternByValue>(linePattern);
 
         if(linePatternByValue != nullptr) {
             auto painter = LinePatternPainter(&pixmap, linePatternByValue);
@@ -55,6 +57,9 @@ QVariant LinePatternModel::data(const QModelIndex &index, int role) const {
 
             case DESCRIPTION:
                 return linePattern->description().c_str();
+
+            default:
+                break;
         }
     }
 
@@ -73,6 +78,9 @@ QVariant LinePatternModel::headerData(int section, Qt::Orientation orientation, 
 
                 case DESCRIPTION:
                     return "Description";
+
+                default:
+                    break;
             }
         }
     }

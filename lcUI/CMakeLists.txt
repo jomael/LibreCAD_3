@@ -1,8 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 PROJECT (LC)
-ADD_DEFINITIONS(-std=c++14)
-ADD_DEFINITIONS("-Wall")
-set(CMAKE_CXX_STANDARD 14)
 
 message("***** LibreCAD Qt user interface *****")
 
@@ -13,11 +10,15 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
+set(QT_USE_QTOPENGL TRUE)
+
 find_package(Qt5Widgets)
 find_package(Qt5Core)
 find_package(Qt5Designer)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5UiTools REQUIRED)
+find_package(Qt5Svg REQUIRED)
+find_package(Qt5OpenGL REQUIRED)
 
 SET(QT_USE_QTDESIGNER ON)
 
@@ -27,6 +28,11 @@ cadmdichild.h
 const.h
 luainterface.h
 lcadviewer.h
+lcadviewerproxy.h
+lcadmodelviewerimpl.h
+lcadpaperviewerimpl.h
+lcadmodelviewer.h
+lcadpaperviewer.h
 widgets/clicommand.h
 widgets/luascript.h
 widgets/toolbar.h
@@ -39,6 +45,7 @@ widgets/linepatternpathpart.h
 widgets/linepatternmodel.h
 widgets/linewidthselect.h
 widgets/colorselect.h
+widgets/widgettitlebar.h
 lua/qtbridge.h
 lua/luaqobject.h
 dialogs/addlayerdialog.h
@@ -51,6 +58,11 @@ cadmdichild.cpp
 main.cpp
 luainterface.cpp
 lcadviewer.cpp
+lcadviewerproxy.cpp
+lcadmodelviewerimpl.cpp
+lcadpaperviewerimpl.cpp
+lcadmodelviewer.cpp
+lcadpaperviewer.cpp
 widgets/clicommand.cpp
 widgets/luascript.cpp
 widgets/toolbar.cpp
@@ -63,6 +75,7 @@ widgets/linepatternpathpart.cpp
 widgets/linepatternmodel.cpp
 widgets/linewidthselect.cpp
 widgets/colorselect.cpp
+widgets/widgettitlebar.cpp
 lua/qtbridge.cpp
 lua/luaqobject.cpp
 dialogs/addlayerdialog.cpp
@@ -92,10 +105,11 @@ else()
     include_directories(${EIGEN3_INCLUDE_DIR})
 endif()
 
-# LOG4CXX
-find_package(Log4CXX 1.10 REQUIRED)
-include_directories(${LOG4CXX_INCLUDE_DIRS})
-link_directories(${LOG4CXX_LIBRARY_DIRS})
+# Boost logging
+find_package(Boost 1.54.0 REQUIRED COMPONENTS log)
+FIND_PACKAGE ( Threads )
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
 
 #Lua
 find_package(Lua 5.2 REQUIRED)
@@ -106,22 +120,36 @@ link_directories(${LUA_LIBRARY_DIRS})
 # SEPARATE BUILDING FLAG
 set(SEPARATE_BUILD OFF)
 
+# GLEW library-------------------------
+
+cmake_policy(SET CMP0074 OLD)
+find_package(GLEW REQUIRED)
+
+include_directories(
+    ${GLEW_INCLUDE_DIR}
+    ${QT_QTOPENGL_INCLUDE_DIR})
+#--------------------------------------------------
+
+
+
 if (SEPARATE_BUILD STREQUAL "ON")
     include_directories("${CMAKE_SOURCE_DIR}/../lckernel")
     include_directories("${CMAKE_SOURCE_DIR}/../third_party")
-    include_directories("${CMAKE_SOURCE_DIR}/../lcDXFDWG")
+    include_directories("${CMAKE_SOURCE_DIR}/../persistence")
     include_directories("${CMAKE_SOURCE_DIR}/../lcviewernoqt")
     include_directories("${CMAKE_SOURCE_DIR}/../lcviewerqt")
     include_directories("${CMAKE_SOURCE_DIR}/../lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/../lcUI")
+    include_directories("${CMAKE_SOURCE_DIR}/../third_party/kaguya/include")
 else() 
     include_directories("${CMAKE_SOURCE_DIR}/lckernel")
     include_directories("${CMAKE_SOURCE_DIR}/third_party")
-    include_directories("${CMAKE_SOURCE_DIR}/lcDXFDWG")
+    include_directories("${CMAKE_SOURCE_DIR}/persistence")
     include_directories("${CMAKE_SOURCE_DIR}/lcviewernoqt")
     include_directories("${CMAKE_SOURCE_DIR}/lcviewerqt")
     include_directories("${CMAKE_SOURCE_DIR}/lcadluascript")
     include_directories("${CMAKE_SOURCE_DIR}/lcUI")
+    include_directories("${CMAKE_SOURCE_DIR}/third_party/kaguya/include")
 endif()
 
 link_directories(${PANGO_LIBRARY_DIRS})
@@ -129,14 +157,15 @@ link_directories(${PANGO_LIBRARY_DIRS})
 set(EXTRA_LIBS
         lcluascript
         lcviewernoqt
-        lcdxfdwg
+        persistence
         lckernel
         ${LUA_LIBRARIES}
         Qt5::Core
         Qt5::Gui
         Qt5::Widgets
         Qt5::UiTools
-        ${LOG4CXX_LIBRARIES}
+        Qt5::OpenGL
+		Qt5::Svg
         ${APR_LIBRARIES})
 
 #Create library for unit tests
@@ -146,4 +175,12 @@ if(WITH_UNITTESTS)
 endif(WITH_UNITTESTS)
 
 add_executable(librecad ${UI_srcs} ${UI_hdrs} ${UI_HEADERS} ${UI_RESOURCES})
-target_link_libraries(librecad ${EXTRA_LIBS})
+
+qt5_use_modules(librecad Core Gui Widgets OpenGL Svg)
+
+target_link_libraries(librecad ${EXTRA_LIBS} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lboost_system
+${GLEW_LIBRARY})
+
+# INSTALLATION
+install(TARGETS librecad DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lcUI/ui" DESTINATION "usr/share/librecad/lcUI")

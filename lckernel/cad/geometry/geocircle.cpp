@@ -1,12 +1,15 @@
-#include <cad/functions/intersect.h>
+#include <cad/math/intersect.h>
 #include "geocircle.h"
 
 using namespace lc;
 using namespace geo;
 
-Circle::Circle(const Coordinate& center, double radius) : Base(), _center(center), _radius(radius) {
+Circle::Circle(Coordinate center, double radius) :
+        Base(),
+        _center(std::move(center)),
+        _radius(radius) {
     if (radius < 0.0) {
-        throw "Invalid radius";
+        throw std::runtime_error("Invalid radius");
     }
 
 }
@@ -31,7 +34,7 @@ std::vector<Coordinate> Circle::lineTangentPointsOnEntity(const lc::geo::Coordin
     double tangentLength = sqrt(distance * distance - _radius * _radius);
 
     geo::Circle intersectionCircle(extPoint, tangentLength);
-    Intersect intersect(Intersect::OnEntity, LCTOLERANCE);
+    maths::Intersect intersect(maths::Intersect::OnEntity, LCTOLERANCE);
     intersect(*this, intersectionCircle);
     return intersect.result();
 }

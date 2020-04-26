@@ -2,10 +2,11 @@
 
 #include <QTest>
 #include <widgets/layers.cpp>
+#include <cadmdichild.h>
 
-class LayersTest : public Layers {
+class LayersTest : public lc::ui::widgets::Layers {
     public:
-        LayersTest(CadMdiChild* mdiChild = nullptr, QWidget* parent = 0) :
+        LayersTest(lc::ui::CadMdiChild* mdiChild = nullptr, QWidget* parent = nullptr) :
                 Layers(mdiChild, parent)
         {}
 
@@ -27,7 +28,7 @@ class LayersTest : public Layers {
             QTest::mouseClick(viewport, Qt::LeftButton, NULL, QPoint(xPos, yPos));
         }
 
-        void addLayer(lc::Layer_CSPtr layer) {
+        void addLayer(lc::meta::Layer_CSPtr layer) {
             createLayer(layer);
         }
 

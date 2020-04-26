@@ -1,68 +1,183 @@
 #include "lcadviewer.h"
 #include <QtGui>
 #include <QVBoxLayout>
-
-using namespace LCViewer;
+#include <iostream>
+#include <QOpenGLContext>
+#include <QSurfaceFormat>
+#include <cad/logger/logger.h>
+using namespace lc;
+using namespace lc::ui;
 
 LCADViewer::LCADViewer(QWidget *parent) :
-    QWidget(parent),
+     QOpenGLWidget(parent),
     _docCanvas(nullptr),
     _mouseScrollKeyActive(false),
     _operationActive(false),
     _scale(1.0),
     _zoomMin(0.05),
     _zoomMax(20.0),
-    _scaleLineWidth(false) {
-
+    _scaleLineWidth(false),
+    _backgroundPainter(nullptr),
+    _documentPainter(nullptr),
+    _foregroundPainter(nullptr)
+     {
     setMouseTracking(true);
     this->_altKeyActive = false;
     this->_ctrlKeyActive = false;
-	setCursor(Qt::BlankCursor);
+    setCursor(Qt::BlankCursor);
+
+   QSurfaceFormat format;
+    format.setMajorVersion(3);
+    format.setMinorVersion(0);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setOption(QSurfaceFormat::DebugContext);
+    setFormat(format);
 }
 
-LCADViewer::~LCADViewer() {
-    deletePainters();
+void LCADViewer::messageLogged(const QOpenGLDebugMessage &msg)
+{
+  QString error;
+  error += " (";
 
+  // Format based on source
+#define CASE(c) case QOpenGLDebugMessage::c: error += #c; break
+  switch (msg.source())
+  {
+    CASE(APISource);
+    CASE(WindowSystemSource);
+    CASE(ShaderCompilerSource);
+    CASE(ThirdPartySource);
+    CASE(ApplicationSource);
+    CASE(OtherSource);
+    CASE(InvalidSource);
+  }
+#undef CASE
+
+  error += " : ";
+
+  // Format based on type
+#define CASE(c) case QOpenGLDebugMessage::c: error += #c; break
+  switch (msg.type())
+  {
+    CASE(ErrorType);
+    CASE(DeprecatedBehaviorType);
+    CASE(UndefinedBehaviorType);
+    CASE(PortabilityType);
+    CASE(PerformanceType);
+    CASE(OtherType);
+    CASE(MarkerType);
+    CASE(GroupPushType);
+    CASE(GroupPopType);
+  }
+#undef CASE
+
+  error += ")";
+
+  switch (msg.severity())
+  {
+  case QOpenGLDebugMessage::NotificationSeverity:
+	  LOG_DEBUG << error.toStdString() << std::endl;
+	  break;
+  case QOpenGLDebugMessage::HighSeverity:
+	  LOG_ERROR << error.toStdString() << std::endl;
+	  break;
+  case QOpenGLDebugMessage::MediumSeverity:
+	  LOG_WARNING << error.toStdString() << std::endl;
+	  break;
+  case QOpenGLDebugMessage::LowSeverity:
+	  LOG_INFO << error.toStdString() << std::endl;
+	  break;
+  }
+}
+
+LCADViewer::~LCADViewer() 
+{
+    deletePainters();
     _document->commitProcessEvent().disconnect<LCADViewer, &LCADViewer::on_commitProcessEvent>(this);
 }
 
+void LCADViewer::initializeGL()
+{
+  QOpenGLWidget::makeCurrent();
+  QOpenGLContext *CC= QOpenGLContext::currentContext();
+  
+  QOpenGLDebugLogger *logger = new QOpenGLDebugLogger(this);
+  logger->initialize();
 
-void LCADViewer::setDocument(std::shared_ptr<lc::Document> document) {
+  connect(logger, &QOpenGLDebugLogger::messageLogged, this, &LCADViewer::messageLogged);
+  logger->startLogging();
+    
+
+  int width = size().width();
+  int height = size().height();
+
+  if (CC != 0)
+  {
+      GLenum err = glewInit();
+
+      if (err != GLEW_OK) {
+          LOG_ERROR << "GLEW Error: " << glewGetErrorString(err) << std::endl;
+          exit(1);
+      }
+      if (!GLEW_VERSION_2_1) {
+          LOG_ERROR << "OpenGL version 2.1 is not available" << std::endl;
+          exit(1);
+      }
+
+    deletePainters();     
+    createPainters(width, height);
+    _documentPainter->create_resources();
+  }
+
+  else
+  {
+     deletePainters();     
+     createPainters(width, height);
+  }
+}
+
+
+void LCADViewer::setDocument(std::shared_ptr<lc::storage::Document> document, meta::Block_CSPtr viewport) 
+{
     int width = size().width();
     int height = size().height();
 
-    createPainters(width, height);
+     deletePainters();     
+     createPainters(width, height);
 
-    _docCanvas = std::make_shared<DocumentCanvas>(document, [this](double* x, double* y) {
+    _docCanvas = std::make_shared<lc::viewer::DocumentCanvas>(document, [this](double* x, double* y) {
         _documentPainter->device_to_user(x, y);
-    });
+    }, viewport);
 
     _document = document;
     _document->commitProcessEvent().connect<LCADViewer, &LCADViewer::on_commitProcessEvent>(this);
+ 
+    if(_docCanvas != nullptr)
+   _docCanvas->setPainter(_documentPainter);  //passing pointer to painter to doc canvas
 }
 
-void LCADViewer::setSnapManager(std::shared_ptr<SnapManager> snapmanager) {
-    _snapManager = snapmanager;
+void LCADViewer::setSnapManager(std::shared_ptr<lc::viewer::manager::SnapManager> snapmanager) {
+    _snapManager = std::move(snapmanager);
 }
 
-void LCADViewer::setDragManager(DragManager_SPtr dragManager) {
-    _dragManager = dragManager;
+void LCADViewer::setDragManager(lc::viewer::manager::DragManager_SPtr dragManager) {
+    _dragManager = std::move(dragManager);
 }
 
-
-void LCADViewer::on_commitProcessEvent(const lc::CommitProcessEvent &) {
-    updateDocument();
+void LCADViewer::updateHelper(){
     update();
 }
 
-
+void LCADViewer::on_commitProcessEvent(const lc::event::CommitProcessEvent& event) {
+    updateDocument();
+    update();
+}
 
 /**
   * Handle key pressing and release to add additional states to this view
   *
   */
-void LCADViewer::keyPressEvent(QKeyEvent *event) {
-
+void LCADViewer::keyPressEvent(QKeyEvent* event) {
     QWidget::keyPressEvent(event);
 
     switch (event->key()) {
@@ -79,11 +194,18 @@ void LCADViewer::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Control:
             _ctrlKeyActive = true;
             break;
-    }
 
+        case Qt::Key_Return:
+            //Change focus to command line
+            break;
+
+        default:
+            emit keyPressEvent(event->key());
+            break;
+    }
 }
 
-void LCADViewer::keyReleaseEvent(QKeyEvent *event) {
+void LCADViewer::keyReleaseEvent(QKeyEvent* event) {
     QWidget::keyReleaseEvent(event);
 
     switch (event->key()) {
@@ -103,71 +225,55 @@ void LCADViewer::keyReleaseEvent(QKeyEvent *event) {
     }
 }
 
-void LCADViewer::resizeEvent(QResizeEvent * event) {
-    deletePainters();
-    createPainters(event->size().width(), event->size().height());
-    _docCanvas->newDeviceSize(event->size().width(), event->size().height());
-
+void LCADViewer::resizeGL(int width, int height)
+{
+   _docCanvas->newDeviceSize(width,height);
+    _documentPainter->new_device_size(width,height);
     updateBackground();
     updateDocument();
 }
 
 void LCADViewer::wheelEvent(QWheelEvent *event) {
-
-    if (event->angleDelta().y() > 0) {
-        for(auto pair : imagemaps) {
+  QOpenGLWidget::makeCurrent();
+   if (event->angleDelta().y() > 0) 
+    {
+        for(auto pair : imagemaps) 
+        {
             _docCanvas->zoom(*pair.first, 1.1, true, event->pos().x(), event->pos().y());
-        }
-    } else if (event->angleDelta().y() < 0) {
-        for(auto pair : imagemaps) {
-            _docCanvas->zoom(*pair.first, 0.9, true, event->pos().x(), event->pos().y());
-        }
+        } 
+    } 
+    else if (event->angleDelta().y() < 0)
+    {
+        for(auto pair : imagemaps) 
+        {
+            _docCanvas->zoom(*pair.first, 0.9, true, event->pos().x(), event->pos().y());         
+        } 
     }
-
+ 
     updateBackground();
     updateDocument();
-
     this->update();
 }
-
-void LCADViewer::setVerticalOffset(int v) {
-    int val = v_ - v;
-    for(auto pair : imagemaps) {
-        pair.first->translate(0, val * 10);
-    }
-    v_ = v;
-
-    updateBackground();
-    updateDocument();
-    update();
-}
-
-void LCADViewer::setHorizontalOffset(int v) {
-    int val = h_ - v;
-    for(auto pair : imagemaps) {
-        pair.first->translate(val * 20, 0);
-    }
-    h_ = v;
-
-    updateBackground();
-    updateDocument();
-    update();
-}
-
 
 void LCADViewer::mouseMoveEvent(QMouseEvent *event) {
     QWidget::mouseMoveEvent(event);
 
-    _snapManager->setDeviceLocation(event->pos().x(), event->pos().y());
+ _snapManager->setDeviceLocation(event->pos().x(), event->pos().y());
     _dragManager->onMouseMove();
 
     // Selection by area
     if (_altKeyActive || _mouseScrollKeyActive) {
         if (!startSelectPos.isNull()) {
-            this->_docCanvas->pan(*_documentPainter, event->pos().x(), event->pos().y());
-
+            auto translateX = event->pos().x()-startSelectPos.x();
+            auto translateY = event->pos().y()-startSelectPos.y();
+            startSelectPos = event->pos();
+            for(auto pair : imagemaps) {
+                _docCanvas->pan(*pair.first, translateX, translateY);
+            }  
+            
             updateBackground();
             updateDocument();
+            update();
         }
     } else {
         if (!startSelectPos.isNull()) {
@@ -181,18 +287,16 @@ void LCADViewer::mouseMoveEvent(QMouseEvent *event) {
             updateDocument();
         }
     }
-
     emit mouseMoveEvent();
-
     update();
 }
 
-void LCADViewer::mousePressEvent(QMouseEvent *event) {
+void LCADViewer::mousePressEvent(QMouseEvent *event) 
+{
     QWidget::mousePressEvent(event);
 
     startSelectPos = event->pos();
-
-    if(!_operationActive) {
+   if(!_operationActive) {
         _dragManager->onMousePress();
     }
 
@@ -205,8 +309,11 @@ void LCADViewer::mousePressEvent(QMouseEvent *event) {
             _mouseScrollKeyActive = true;
         }
             break;
-    }
 
+        default:
+            break;
+    }
+  
     emit mousePressEvent();
 }
 
@@ -225,9 +332,7 @@ void LCADViewer::mouseReleaseEvent(QMouseEvent *event) {
         case Qt::MiddleButton: {
             _mouseScrollKeyActive = false;
         } break;
-        
-        default: {
-            
+        default: {    
         } break;
     }
 
@@ -239,70 +344,54 @@ void LCADViewer::mouseReleaseEvent(QMouseEvent *event) {
     update();
 }
 
-std::shared_ptr<DocumentCanvas> LCADViewer::documentCanvas() const {
+std::shared_ptr<lc::viewer::DocumentCanvas> LCADViewer::documentCanvas() const {
     return _docCanvas;
 }
 
 void LCADViewer::setOperationActive(bool operationActive) {
     _operationActive = operationActive;
 
-    if(operationActive == false) {
+    if(!operationActive) {
         documentCanvas()->removeSelection();
     }
 }
 
-void LCADViewer::paintEvent(QPaintEvent *p) {
-    if (p->rect().width() == 0 || p->rect().height() == 0) {
-        return;
-    }
 
-    QPainter painter(this);
-
-    _foregroundPainter->clear(1.0, 1.0, 1.0, 0.0);
-    _docCanvas->render(*_foregroundPainter, VIEWER_FOREGROUND);
-
-    painter.drawImage(QPoint(0, 0), *imagemaps.at(_backgroundPainter));
-    painter.drawImage(QPoint(0, 0), *imagemaps.at(_documentPainter));
-    painter.drawImage(QPoint(0, 0), *imagemaps.at(_foregroundPainter));
-
-    painter.end();
+void LCADViewer::paintGL()
+{
+    _docCanvas->render(*_documentPainter, lc::viewer::VIEWER_BACKGROUND);
+    _docCanvas->render(*_documentPainter, lc::viewer::VIEWER_DOCUMENT);
+    _docCanvas->render(*_documentPainter, lc::viewer::VIEWER_FOREGROUND);
 }
 
 void LCADViewer::createPainters(unsigned int width, unsigned int height) {
     QImage *m_image;
 
     m_image = new QImage(width, height, QImage::Format_ARGB32);
-    _backgroundPainter = createCairoImagePainter(m_image->bits(), width, height);
-    imagemaps.insert(std::make_pair(_backgroundPainter, m_image));
-
-    m_image = new QImage(width, height, QImage::Format_ARGB32);
-    _documentPainter = createCairoImagePainter(m_image->bits(), width, height);
+    _documentPainter = lc::viewer::createOpenGLPainter(m_image->bits(), width, height);
     imagemaps.insert(std::make_pair(_documentPainter, m_image));
 
-    m_image = new QImage(width, height, QImage::Format_ARGB32);
-    _foregroundPainter = createCairoImagePainter(m_image->bits(), width, height);
-    imagemaps.insert(std::make_pair(_foregroundPainter, m_image));
-}
+   if(_docCanvas != nullptr)
+   _docCanvas->setPainter(_documentPainter);  //passing pointer to painter to doc canvas
+ }
 
-void LCADViewer::deletePainters() {
+void LCADViewer::deletePainters() 
+{
     for(auto pair : imagemaps) {
         delete pair.first;
         delete pair.second;
     }
-
     imagemaps.clear();
 }
 
-void LCADViewer::updateBackground() {
-    _backgroundPainter->clear(1.0, 1.0, 1.0, 0.0);
-    _docCanvas->render(*_backgroundPainter, VIEWER_BACKGROUND);
+void LCADViewer::updateBackground()
+{
 }
 
-void LCADViewer::updateDocument() {
-    _documentPainter->clear(1.0, 1.0, 1.0, 0.0);
-    _docCanvas->render(*_documentPainter, VIEWER_DOCUMENT);
+void LCADViewer::updateDocument() 
+{
 }
 
-const std::shared_ptr<DocumentCanvas>& LCADViewer::docCanvas() const {
+const std::shared_ptr<lc::viewer::DocumentCanvas>& LCADViewer::docCanvas() const {
     return _docCanvas;
 }
